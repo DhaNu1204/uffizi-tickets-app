@@ -29,6 +29,20 @@ jobs:
       run:
         working-directory: backend
 
+    env:
+      APP_ENV: testing
+      APP_DEBUG: true
+      APP_KEY: base64:dGVzdGtleWZvcmNpY2RwaXBlbGluZTEyMzQ1Njc4OTA=
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: testing
+      DB_USERNAME: root
+      DB_PASSWORD: password
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -52,27 +66,29 @@ jobs:
           restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Create storage directories
+        run: |
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p bootstrap/cache
+          chmod -R 775 storage bootstrap/cache
 
       - name: Copy environment file
         run: cp .env.example .env
 
       - name: Generate application key
-        run: php artisan key:generate
+        run: php artisan key:generate --force
 
-      - name: Configure test database
-        run: |
-          php artisan config:clear
-          php artisan cache:clear
+      - name: Clear config cache
+        run: php artisan config:clear
+
+      - name: Run database migrations
+        run: php artisan migrate --force
 
       - name: Run PHPUnit tests
-        env:
-          DB_CONNECTION: mysql
-          DB_HOST: 127.0.0.1
-          DB_PORT: 3306
-          DB_DATABASE: testing
-          DB_USERNAME: root
-          DB_PASSWORD: password
         run: vendor/bin/phpunit --testdox
 
   backend-lint:
@@ -92,21 +108,6 @@ jobs:
         with:
           php-version: '8.2'
           extensions: mbstring, dom
-          tools: phpstan
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --prefer-dist --no-progress --no-suggest
 
       - name: Run PHP syntax check
         run: find app -name "*.php" -print0 | xargs -0 -n1 php -l
