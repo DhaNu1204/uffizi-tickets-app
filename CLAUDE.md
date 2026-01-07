@@ -3,11 +3,15 @@
 ## Project Overview
 A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Bokun API and tracks Uffizi ticket purchases.
 
+**Live URL**: https://uffizi.deetech.cc
+**GitHub**: https://github.com/DhaNu1204/uffizi-tickets-app
+
 ## Tech Stack
 - **Backend**: Laravel 12.x (PHP 8.2+)
 - **Frontend**: React 19 + Vite
 - **Database**: MySQL
 - **API Integration**: Bokun booking system
+- **CI/CD**: GitHub Actions
 
 ## Project Structure
 ```
@@ -454,19 +458,54 @@ tail -n +3 backup.sql > backup_clean.sql
 
 ---
 
+## GitHub Repository
+
+**URL**: https://github.com/DhaNu1204/uffizi-tickets-app
+
+### CI/CD Pipeline (GitHub Actions)
+
+The repository has automated CI/CD via `.github/workflows/ci.yml`:
+
+| Job | Description |
+|-----|-------------|
+| `backend-tests` | PHPUnit tests on PHP 8.2 & 8.3 with MySQL |
+| `backend-lint` | PHP syntax check |
+| `frontend-build` | npm install, lint, build React app |
+| `security-check` | Composer & NPM security audits |
+
+**Triggers**: Push/PR to `main`, `master`, `develop` branches
+
+### Git Workflow
+
+```bash
+# Make changes locally
+cd D:/Uffizi-Ticket-App
+
+# Commit and push
+git add .
+git commit -m "Your message"
+git push origin master:main
+
+# CI runs automatically - check status at:
+# https://github.com/DhaNu1204/uffizi-tickets-app/actions
+```
+
+---
+
 ## Production Status
 
-**Status**: OPERATIONAL (Last deployed: Jan 4, 2026)
+**Status**: OPERATIONAL (Last deployed: Jan 7, 2026)
 
 The production server at https://uffizi.deetech.cc is fully functional.
 
 ### Current Stats
-- **Database**: 426 bookings
-- **Frontend Build**: `index-B35f6sNz.js`, `index-BpckroFc.css`
-- **Last Backup**: `backup_before_deploy_20260104_210032.sql`
+- **Database**: 434 bookings
+- **Frontend Build**: `index-DM-R9y2C.js`, `index-DHlzghEP.css`
 
 ### Previous Issues (Resolved)
-- **PDO Extension Issue**: Was resolved by enabling PDO in Hostinger PHP configuration (hPanel → Advanced → PHP Configuration → Extensions)
+- **PDO Extension Issue**: Resolved by enabling PDO in Hostinger PHP configuration
+- **Guide Name Not Saving**: Fixed by updating Booking model `$fillable` array
+- **Customer Email/Phone Missing**: Fixed by updating BokunService and running full sync
 
 ---
 
