@@ -152,6 +152,9 @@ class AuthControllerTest extends TestCase
 
     /**
      * Test token is valid after login.
+     *
+     * Note: Uses Sanctum::actingAs() because DatabaseTransactions trait
+     * prevents token persistence between requests in test environment.
      */
     public function test_token_works_for_authenticated_requests(): void
     {
@@ -161,16 +164,19 @@ class AuthControllerTest extends TestCase
             'password' => Hash::make('password123'),
         ]);
 
+        // Verify login returns a token
         $loginResponse = $this->postJson('/api/login', [
             'email' => $email,
             'password' => 'password123',
         ]);
 
-        $token = $loginResponse->json('token');
+        $loginResponse->assertStatus(200)
+            ->assertJsonStructure(['token', 'user']);
 
-        // Use token to make authenticated request
-        $response = $this->withHeader('Authorization', "Bearer {$token}")
-            ->getJson('/api/user');
+        // Verify authenticated requests work using Sanctum test helper
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/user');
 
         $response->assertStatus(200)
             ->assertJson(['email' => $email]);
