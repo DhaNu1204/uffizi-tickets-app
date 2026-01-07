@@ -1,0 +1,522 @@
+# Claude Code Context - Uffizi Ticket App
+
+## Project Overview
+A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Bokun API and tracks Uffizi ticket purchases.
+
+## Tech Stack
+- **Backend**: Laravel 12.x (PHP 8.2+)
+- **Frontend**: React 19 + Vite
+- **Database**: MySQL
+- **API Integration**: Bokun booking system
+
+## Project Structure
+```
+/Uffizi-Ticket-App
+├── backend/           # Laravel API
+│   ├── app/
+│   │   ├── Http/Controllers/
+│   │   │   ├── BookingController.php    # Main CRUD + sync
+│   │   │   ├── AuthController.php       # Login/logout
+│   │   │   └── WebhookController.php    # Webhook management
+│   │   ├── Models/
+│   │   │   └── Booking.php              # Booking model
+│   │   └── Services/
+│   │       └── BokunService.php         # Bokun API integration
+│   ├── routes/api.php                   # API routes
+│   └── database/migrations/             # DB schema
+├── frontend/          # React SPA
+│   ├── src/
+│   │   ├── components/
+│   │   │   └── BookingTable.jsx         # Main booking table
+│   │   ├── pages/
+│   │   │   └── Dashboard.jsx            # Dashboard page
+│   │   └── services/
+│   │       └── api.js                   # API client
+│   └── dist/                            # Production build
+└── deploy/            # Deployment files
+```
+
+## Key Features
+1. **Bokun Sync**: Fetches confirmed bookings for Uffizi products
+2. **Ticket Tracking**: Mark bookings as TICKET_PURCHASED with reference numbers
+3. **Tickets Sent Tracking**: Track when tickets are sent to clients (with timestamp)
+4. **Notes**: Add notes to individual bookings
+5. **Product Filter**: Filter by ticket type (Entry, Group Tour, VIP, etc.)
+6. **PAX Details**: Shows passenger breakdown (2x Adult, 1x Child)
+7. **Webhooks**: Real-time booking updates from Bokun
+8. **Daily Pagination**: View one day's bookings per page with date navigation
+9. **Calendar Picker**: Visual calendar with booking count indicators for each day
+10. **Time Slot Grouping**: Bookings grouped by tour time within each day
+11. **Participant Names**: Shows individual participant names from Bokun
+12. **Auto-Sync**: Automatically syncs on dashboard load
+13. **Cancellation Detection**: Detects cancelled bookings during sync
+14. **Florence Timezone**: Uses Europe/Rome timezone for "today" calculation
+15. **Guide Assignment**: Assign guides to guided tour bookings
+16. **Booking Channel**: Tracks booking source (GetYourGuide, Viator, Direct, etc.)
+17. **Customer Contact**: Stores customer email and phone from bookings
+
+## Bokun Product IDs
+- `961802`: Timed Entry Tickets
+- `961801`: Small Group Guided Tour
+- `962885`: Uffizi, David Tour & Gelato with Art Historian
+- `962886`: VIP Private Tour
+- `1130528`: Guided Tour + Vasari
+- `1135055`: Florence Uffizi Gallery Tour with Palazzo Vecchio Entry
+
+## Database Schema (bookings table)
+| Column | Type | Description |
+|--------|------|-------------|
+| bokun_booking_id | varchar | Unique Bokun ID |
+| bokun_product_id | varchar | Product type |
+| booking_channel | varchar | Source (GetYourGuide, Viator, Direct, etc.) |
+| product_name | varchar | Tour/ticket name |
+| customer_name | varchar | Customer name |
+| customer_email | varchar | Customer email address |
+| customer_phone | varchar | Customer phone number |
+| tour_date | datetime | Tour date/time (Florence local stored as UTC) |
+| pax | int | Total passengers |
+| pax_details | json | Breakdown by type (e.g., {"Adult": 2, "Child": 1}) |
+| participants | json | Individual participant names with types |
+| status | varchar | PENDING_TICKET or TICKET_PURCHASED |
+| reference_number | varchar | Uffizi confirmation code |
+| notes | text | Operator notes |
+| guide_name | varchar | Assigned guide for guided tours |
+| cancelled_at | timestamp | When booking was cancelled (null if active) |
+| tickets_sent_at | timestamp | When tickets were sent to client (null if not sent) |
+
+## API Endpoints
+- `POST /api/login` - Authentication
+- `GET /api/bookings/grouped` - Bookings grouped by date with time slots
+- `GET /api/bookings/stats` - Dashboard statistics
+- `PUT /api/bookings/{id}` - Update booking (reference, notes)
+- `POST /api/bookings/sync` - Full sync from Bokun
+- `POST /api/bookings/auto-sync` - Auto-sync (fetches participant names for pending bookings)
+- `POST /api/webhook/bokun` - Webhook receiver
+
+## Environment Variables
+```env
+# Backend (.env)
+BOKUN_ACCESS_KEY=xxx
+BOKUN_SECRET_KEY=xxx
+UFFIZI_PRODUCT_IDS=961802,961801,962885,962886,1130528,1135055
+
+# Frontend (.env.production)
+VITE_API_URL=https://uffizi.deetech.cc/api
+```
+
+## Production Deployment (Hostinger)
+
+### Server Details
+- **URL**: https://uffizi.deetech.cc
+- **Host**: Hostinger Shared Hosting
+- **SSH**: `ssh -p 65002 u803853690@82.25.82.111`
+- **PHP Path**: `/opt/alt/php82/usr/bin/php`
+
+### Directory Structure
+```
+/home/u803853690/domains/deetech.cc/public_html/uffizi/
+├── index.html          # Frontend entry
+├── assets/             # Frontend JS/CSS
+├── .htaccess           # Routing rules
+└── backend/            # Laravel API
+    ├── .env
+    ├── storage/
+    └── ...
+```
+
+### Database
+- **Host**: localhost
+- **Database**: u803853690_uffizi_tickets
+- **Username**: u803853690_uffizi
+
+### SSH Commands
+```bash
+# Navigate to backend
+cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
+
+# Run artisan commands (must use PHP 8.2)
+/opt/alt/php82/usr/bin/php artisan migrate
+/opt/alt/php82/usr/bin/php artisan config:clear
+/opt/alt/php82/usr/bin/php artisan cache:clear
+
+# Create user via tinker
+/opt/alt/php82/usr/bin/php artisan tinker
+```
+
+### Important Configuration Notes
+- **Authentication**: Uses Bearer token auth (NOT cookie-based)
+- **bootstrap/app.php**: Do NOT use `statefulApi()` middleware (causes CSRF issues with token auth)
+- **Exception Handling**: API routes return JSON 401 for unauthenticated requests
+
+## Common Tasks
+- **Sync bookings**: Click "Sync Bokun" button (auto-syncs on page load)
+- **Add ticket reference**: Click "Add Ticket" → Enter Uffizi code → Status changes to "Purchased"
+- **Mark tickets sent**: After purchasing, click "Send" button → Changes to green "Sent" with timestamp
+- **Filter by product**: Use dropdown in filters bar
+- **Navigate dates**: Use prev/next arrows or click date to open calendar
+- **View future bookings**: Open calendar to see booking counts per day
+- **Go to today**: Click "Go to Today" button when viewing other dates
+
+## Workflow
+1. View bookings for the day
+2. Purchase tickets from Uffizi B2B account
+3. Click "Add Ticket" → Enter Uffizi reference number
+4. Add notes if needed
+5. Send tickets to client via WhatsApp/Email
+6. Click "Send" button to mark as sent (tracks timestamp)
+
+## Time Zone Note
+- **Backend**: Bokun stores Florence local time as UTC in the database
+- **Frontend**: Uses `Europe/Rome` timezone for "today" calculation
+- **Date Display**: Times shown as-is (UTC) to match Bokun dashboard
+- **Auto-Update**: Dashboard auto-updates at midnight Florence time
+
+## Direct Database Access via SSH
+
+When web API is unavailable, use SSH to query database directly:
+
+```bash
+# Connect to server
+ssh -p 65002 u803853690@82.25.82.111
+
+# Navigate to backend
+cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
+
+# Use artisan tinker for database queries
+/opt/alt/php82/usr/bin/php artisan tinker
+
+# Example queries in tinker:
+# Get all bookings with ticket references
+App\Models\Booking::whereNotNull('reference_number')->get(['bokun_booking_id', 'customer_name', 'reference_number', 'tour_date']);
+
+# Get bookings for a specific date
+App\Models\Booking::whereDate('tour_date', '2026-01-02')->get();
+
+# Get bookings with status TICKET_PURCHASED
+App\Models\Booking::where('status', 'TICKET_PURCHASED')->get();
+
+# Count total bookings
+App\Models\Booking::count();
+```
+
+## Artisan Commands
+
+```bash
+# Sync bookings from Bokun (with participant fetch limit)
+/opt/alt/php82/usr/bin/php artisan bokun:sync --limit=50
+
+# Full sync (fetch ALL missing participants)
+/opt/alt/php82/usr/bin/php artisan bokun:sync --full
+
+# Debug booking structure (for troubleshooting participant extraction)
+/opt/alt/php82/usr/bin/php artisan booking:debug GYG6H8LKF93A
+
+# Clear all caches
+/opt/alt/php82/usr/bin/php artisan optimize:clear
+```
+
+## Debug Tools (Development Only)
+
+When APP_DEBUG=true, these endpoints are available:
+- `GET /api/bookings/test-bokun` - Test Bokun API connection
+- `GET /api/bookings/debug/{confirmationCode}` - Debug booking structure
+- `GET /api/bookings/raw/{confirmationCode}` - Raw Bokun API response
+
+Web debug page (DELETE AFTER USE):
+- `backend/public/debug-booking.php` - Visual booking structure inspector
+
+## Cancellation Handling
+
+Cancelled bookings are automatically detected and removed from the dashboard.
+
+### How It Works
+1. **During Sync** (`bokun:sync`):
+   - Compares DB bookings with Bokun API results
+   - If a booking is in DB but NOT in API, checks Bokun status
+   - If status = `CANCELLED`, sets `cancelled_at` and soft-deletes
+
+2. **Via Webhook** (real-time):
+   - Bokun sends cancellation webhook to `/api/webhook/bokun`
+   - System immediately soft-deletes the booking
+
+3. **Query Filtering**:
+   - All API queries automatically exclude soft-deleted bookings (Laravel SoftDeletes)
+   - Cancelled bookings never appear in the dashboard
+
+### Check Cancelled Bookings
+```bash
+# Via tinker
+php artisan tinker
+App\Models\Booking::onlyTrashed()->count();  # Count soft-deleted
+App\Models\Booking::onlyTrashed()->get(['bokun_booking_id', 'customer_name', 'cancelled_at']);
+```
+
+## Update Ticket Modal
+
+The "Update Ticket" popup displays:
+- Customer name
+- **Customer email** (clickable mailto link)
+- **Customer phone** (clickable tel link)
+- Tour name and date
+- PAX details and participant names
+- Ticket reference input
+- Guide assignment (for guided tours)
+- Notes field
+
+**Note**: Email/phone data is fetched during sync. Run `bokun:sync --full` to populate missing contact info.
+
+## Troubleshooting
+
+### Common Issues
+
+**1. "The --limit option does not exist" error**
+- Cause: Old `SyncBokunBookings.php` on server
+- Fix: Upload updated file from `backend/app/Console/Commands/SyncBokunBookings.php`
+
+**2. Auto-sync failing**
+- Check: `tail -50 storage/logs/laravel.log`
+- The `autoSync()` method calls `bokun:sync --limit=50`
+
+**3. GetYourGuide bookings missing participant names**
+- GYG bookings store participants in different locations than direct bookings
+- The `extractParticipants()` method checks 5 different data structures
+- Use debug command to inspect: `php artisan booking:debug GYG6H8LKF93A`
+
+**4. Permission denied on laravel.log**
+```bash
+chmod 666 storage/logs/laravel.log
+chmod 775 storage/logs/
+```
+
+**5. Class "PDO" not found (Web PHP issue)**
+- CLI PHP has PDO but Web PHP may not
+- Check in Hostinger: PHP Configuration → Extensions → Enable PDO
+- Verify: Create test.php with `<?php echo class_exists('PDO') ? 'Yes' : 'No'; ?>`
+
+**6. CORS errors in local development**
+- Check which port the frontend is using (may be 5174/5175 if 5173 is busy)
+- Add the port to `backend/config/cors.php` allowed_origins
+- Clear cache: `php artisan config:clear`
+- Restart backend server
+
+**7. Customer email/phone not showing in modal**
+- Data may not be populated for older bookings
+- Run: `php artisan bokun:sync --full` to fetch all contact info
+- Airbnb bookings won't have contact info (Airbnb doesn't share it)
+
+### Checking Server Logs
+```bash
+# Laravel log
+tail -100 storage/logs/laravel.log
+
+# Check PHP extensions in web context
+echo '<?php print_r(get_loaded_extensions()); ?>' > public/test.php
+curl https://uffizi.deetech.cc/backend/public/test.php
+rm public/test.php
+```
+
+## Files Modified in Recent Updates
+
+### Backend Changes (Jan 2026)
+- `routes/api.php` - Added rate limiting, removed debug routes
+- `app/Http/Controllers/BookingController.php` - Added caching, improved sync, cancellation handling
+- `app/Services/BokunService.php` - Enhanced participant extraction, customer contact extraction
+- `app/Console/Commands/SyncBokunBookings.php` - Added --limit option, cancellation detection
+- `app/Console/Commands/DebugBookingStructure.php` - NEW debug command
+- `config/cors.php` - Updated CORS allowed origins for local development (ports 5173-5175)
+- `database/migrations/2026_01_01_000001_add_composite_index_to_bookings.php` - NEW index
+- `database/migrations/2026_01_04_*` - Added booking_channel, guide_name, customer_email, customer_phone
+
+### Frontend Changes
+- `src/App.jsx` - Added lazy loading
+- `src/config/products.js` - NEW product configuration file
+- `src/pages/Dashboard.jsx` - Uses product config
+- `src/components/BookingTable.jsx` - Modal displays customer email/phone with clickable links
+
+### Latest Deployment (Jan 4, 2026)
+- Built frontend: `index-B35f6sNz.js`, `index-BpckroFc.css`, `Dashboard-*.js/css`
+- Uploaded updated `cors.php` to production
+- Database backup created before deployment
+- All caches cleared on production
+
+## Rate Limiting (Production)
+- Login: 5 requests per minute
+- API: 60 requests per minute
+- Sync/Import: 2 requests per minute
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- PHP 8.2+
+- MySQL 8.0 (installed at `C:/Program Files/MySQL/MySQL Server 8.0/`)
+- Node.js 18+
+- Composer
+
+### Local Database
+- **Host**: 127.0.0.1
+- **Port**: 3306
+- **Database**: uffizi_tickets
+- **Username**: root
+- **Password**: `RL94_#BbiLhuy789xF`
+
+### Quick Start
+```bash
+# 1. Start MySQL (should be running as Windows service)
+
+# 2. Start Laravel backend
+cd D:/Uffizi-Ticket-App/backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+# 3. Start React frontend (new terminal)
+cd D:/Uffizi-Ticket-App/frontend
+npm run dev -- --port 5173 --host 127.0.0.1
+```
+
+### Local URLs
+| Service | URL |
+|---------|-----|
+| Frontend | http://127.0.0.1:5173 |
+| Backend API | http://127.0.0.1:8000/api |
+
+### Environment Files
+**Backend** (`backend/.env`):
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=uffizi_tickets
+DB_USERNAME=root
+DB_PASSWORD="RL94_#BbiLhuy789xF"
+```
+
+**Frontend** (`frontend/.env`):
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+### CORS Configuration (Local Development)
+The backend CORS config (`backend/config/cors.php`) must include your frontend port:
+```php
+'allowed_origins' => [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'http://localhost:5175',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
+    'https://uffizi.deetech.cc',
+],
+```
+
+**If you get CORS errors:**
+1. Check which port the frontend is running on (Vite may use 5174/5175 if 5173 is busy)
+2. Add that port to `allowed_origins` in `backend/config/cors.php`
+3. Clear config cache: `php artisan config:clear`
+4. Restart the backend server
+
+### Clone Database from Production
+```bash
+# 1. Export from Hostinger via SSH
+ssh -p 65002 u803853690@82.25.82.111
+cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
+mysqldump -u u803853690_uffizi -p u803853690_uffizi_tickets > backup.sql
+
+# 2. Download to local
+scp -P 65002 u803853690@82.25.82.111:/home/u803853690/domains/deetech.cc/public_html/uffizi/backend/backup.sql ./
+
+# 3. Clean the file (remove first 2 lines if MariaDB warnings present)
+tail -n +3 backup.sql > backup_clean.sql
+
+# 4. Import to local MySQL
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p"RL94_#BbiLhuy789xF" uffizi_tickets < backup_clean.sql
+```
+
+### MySQL Commands (Local)
+```bash
+# Connect to local MySQL
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p"RL94_#BbiLhuy789xF" uffizi_tickets
+
+# Quick queries
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -p"RL94_#BbiLhuy789xF" uffizi_tickets -e "SELECT COUNT(*) FROM bookings;"
+```
+
+---
+
+## Backup Files
+
+| File | Description |
+|------|-------------|
+| `D:/Uffizi-Ticket-App/uffizi_backup.sql` | Raw database export from Hostinger |
+| `D:/Uffizi-Ticket-App/uffizi_backup_clean.sql` | Cleaned SQL (MariaDB warnings removed) |
+| `D:/Uffizi-Ticket-App/all_bookings_backup.json` | Complete booking data in JSON format |
+
+---
+
+## Production Status
+
+**Status**: OPERATIONAL (Last deployed: Jan 4, 2026)
+
+The production server at https://uffizi.deetech.cc is fully functional.
+
+### Current Stats
+- **Database**: 426 bookings
+- **Frontend Build**: `index-B35f6sNz.js`, `index-BpckroFc.css`
+- **Last Backup**: `backup_before_deploy_20260104_210032.sql`
+
+### Previous Issues (Resolved)
+- **PDO Extension Issue**: Was resolved by enabling PDO in Hostinger PHP configuration (hPanel → Advanced → PHP Configuration → Extensions)
+
+---
+
+## Deployment Procedure
+
+### Quick Deploy (from Windows)
+
+```bash
+# 1. Build frontend
+cd D:/Uffizi-Ticket-App/frontend
+npm run build
+
+# 2. Backup production database
+ssh -p 65002 u803853690@82.25.82.111 "cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend && mysqldump -u u803853690_uffizi -p[PASSWORD] u803853690_uffizi_tickets > backup_$(date +%Y%m%d_%H%M%S).sql"
+
+# 3. Upload backend changes (example: cors.php)
+scp -P 65002 D:/Uffizi-Ticket-App/backend/config/cors.php u803853690@82.25.82.111:/home/u803853690/domains/deetech.cc/public_html/uffizi/backend/config/
+
+# 4. Upload frontend build
+scp -P 65002 D:/Uffizi-Ticket-App/frontend/dist/index.html u803853690@82.25.82.111:/home/u803853690/domains/deetech.cc/public_html/uffizi/
+scp -P 65002 -r D:/Uffizi-Ticket-App/frontend/dist/assets/* u803853690@82.25.82.111:/home/u803853690/domains/deetech.cc/public_html/uffizi/assets/
+
+# 5. Run migrations and clear cache
+ssh -p 65002 u803853690@82.25.82.111 "cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend && /opt/alt/php82/usr/bin/php artisan migrate --force && /opt/alt/php82/usr/bin/php artisan optimize:clear"
+
+# 6. Verify deployment
+ssh -p 65002 u803853690@82.25.82.111 "curl -s -o /dev/null -w '%{http_code}' https://uffizi.deetech.cc/"
+```
+
+### Deployment Checklist
+
+| Step | Command/Action |
+|------|----------------|
+| Build frontend | `npm run build` |
+| Backup database | `mysqldump` via SSH |
+| Upload backend | `scp -P 65002` changed PHP files |
+| Upload frontend | `scp -P 65002` dist/index.html + assets |
+| Run migrations | `php artisan migrate --force` |
+| Clear caches | `php artisan optimize:clear` |
+| Verify | Test API and frontend load |
+
+### Rollback Procedure
+
+If deployment fails:
+```bash
+# 1. Restore database from backup
+ssh -p 65002 u803853690@82.25.82.111
+cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
+mysql -u u803853690_uffizi -p u803853690_uffizi_tickets < backup_YYYYMMDD_HHMMSS.sql
+
+# 2. Clear caches
+/opt/alt/php82/usr/bin/php artisan optimize:clear
+```

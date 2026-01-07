@@ -1,0 +1,1346 @@
+/* Table Wrapper */
+.table-wrapper {
+  background: white;
+}
+
+/* Time-Grouped View */
+.time-grouped-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.time-slot-group {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.time-slot-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.time-slot-time {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.time-slot-time svg {
+  width: 16px;
+  height: 16px;
+  opacity: 0.9;
+}
+
+.time-slot-time .time-value {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.025em;
+}
+
+.time-slot-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.time-slot-stats .stat-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.15);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.time-slot-stats .stat-item strong {
+  font-weight: 700;
+  color: white;
+}
+
+.time-slot-stats .stat-item.pending {
+  background: rgba(251, 191, 36, 0.35);
+  color: #fef3c7;
+}
+
+/* Time slot table styling */
+.time-slot-table {
+  border-radius: 0;
+}
+
+.time-slot-table th {
+  background: #f3f4f6;
+}
+
+.time-slot-table tr:last-child td {
+  border-bottom: none;
+}
+
+.table-wrapper.compact .desktop-table th:first-child,
+.table-wrapper.compact .desktop-table td:first-child {
+  width: 80px;
+}
+
+/* Time Badge */
+.time-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  background: #f3f4f6;
+  padding: 0.375rem 0.625rem;
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Loading State */
+.table-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.table-loading p {
+  color: #6b7280;
+  margin: 0;
+}
+
+/* Empty State */
+.table-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 0.75rem;
+  color: #6b7280;
+}
+
+.table-empty svg {
+  width: 48px;
+  height: 48px;
+  color: #d1d5db;
+}
+
+.table-empty p {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.table-empty span {
+  font-size: 0.875rem;
+}
+
+/* Desktop Table */
+.desktop-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.desktop-table th {
+  background: #f9fafb;
+  padding: 0.875rem 1rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.desktop-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+.desktop-table tr:hover {
+  background: #f9fafb;
+}
+
+.desktop-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Row States */
+.row-done {
+  background: #f0fdf4;
+}
+
+.row-done:hover {
+  background: #dcfce7 !important;
+}
+
+.row-pending {
+  background: white;
+}
+
+.row-urgent {
+  animation: pulse-urgent 2s infinite;
+}
+
+@keyframes pulse-urgent {
+  0%, 100% { background: #fef2f2; }
+  50% { background: #fee2e2; }
+}
+
+/* Date Cell */
+.date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-main {
+  font-weight: 600;
+  color: #111827;
+}
+
+.days-badge {
+  display: inline-block;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  background: #e5e7eb;
+  color: #6b7280;
+}
+
+.days-badge.today {
+  background: #dc2626;
+  color: white;
+}
+
+.days-badge.soon {
+  background: #f59e0b;
+  color: white;
+}
+
+/* Customer Cell */
+.customer-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+/* Notes Indicator */
+.notes-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #6366f1;
+  cursor: help;
+}
+
+.notes-indicator svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Tour Cell */
+.tour-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.tour-name-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tour-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+.tour-id {
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+/* Guide Info */
+.guide-info {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.guide-info svg {
+  width: 14px;
+  height: 14px;
+  stroke: #6b7280;
+}
+
+.guide-info .guide-assigned {
+  color: #059669;
+  font-weight: 500;
+}
+
+.guide-info .guide-unassigned {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Guide field in modal */
+.guide-field label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.guide-field label svg {
+  width: 16px;
+  height: 16px;
+  stroke: #6b7280;
+}
+
+/* Card guide info */
+.card-guide {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: #374151;
+}
+
+.card-guide svg {
+  width: 16px;
+  height: 16px;
+  stroke: #6b7280;
+  flex-shrink: 0;
+}
+
+.card-guide .unassigned {
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* Product Type Badge */
+.product-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+}
+
+.product-badge.tour {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fcd34d;
+}
+
+/* PAX Badge */
+.pax-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.5rem;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-weight: 600;
+  font-size: 0.875rem;
+  border-radius: 6px;
+}
+
+/* PAX Details */
+.pax-details {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.625rem;
+  background: #eff6ff;
+  color: #3b82f6;
+  font-weight: 500;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+/* PAX Cell with Participants */
+.pax-cell {
+  min-width: 140px;
+}
+
+/* Participants List */
+.participants-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.participant-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.participant-item .participant-name {
+  color: #111827;
+  font-weight: 500;
+}
+
+.participant-item .participant-type {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Incomplete Participant Warning */
+.incomplete-warning {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+  margin-top: 0.25rem;
+}
+
+.incomplete-warning svg {
+  width: 14px;
+  height: 14px;
+  stroke: #d97706;
+}
+
+.incomplete-warning span {
+  font-style: italic;
+}
+
+/* Mobile incomplete badge */
+.participant-badge.incomplete {
+  background: #fef3c7;
+  color: #92400e;
+  font-style: italic;
+}
+
+/* Modal incomplete warning */
+.incomplete-warning-modal {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.8125rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+
+.incomplete-warning-modal svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  stroke: #d97706;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 9999px;
+}
+
+.status-badge.purchased {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-badge.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+/* Reference Number */
+.ref-number {
+  font-family: monospace;
+  font-weight: 600;
+  color: #111827;
+  background: #f3f4f6;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.ref-empty {
+  color: #9ca3af;
+}
+
+/* Action Buttons */
+.action-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.action-btn.primary:hover {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.action-btn.edit {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.action-btn.edit:hover {
+  background: #e5e7eb;
+}
+
+/* Actions Cell */
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Sent Button */
+.sent-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f9fafb;
+  color: #6b7280;
+}
+
+.sent-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.sent-btn:hover:not(:disabled) {
+  border-color: #667eea;
+  color: #667eea;
+  background: #f0f0ff;
+}
+
+.sent-btn.sent {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: transparent;
+  color: white;
+}
+
+.sent-btn.sent:hover:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+}
+
+.sent-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.sent-btn .btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Mobile Cards - Hidden on desktop */
+.mobile-cards {
+  display: none;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+/* Modal */
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 800px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Horizontal layout wrapper for desktop */
+.modal-content-wrapper {
+  display: flex;
+  gap: 0;
+}
+
+.modal-left {
+  flex: 1;
+  min-width: 0;
+  padding-right: 1.5rem;
+  border-right: 1px solid #e5e7eb;
+}
+
+.modal-right {
+  flex: 1;
+  min-width: 0;
+  padding-left: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-right form {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.modal-right .modal-actions {
+  margin-top: auto;
+  padding-top: 0.5rem;
+}
+
+/* Section titles in modal */
+.section-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: #f3f4f6;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.modal-close:hover {
+  background: #e5e7eb;
+}
+
+.modal-close svg {
+  width: 18px;
+  height: 18px;
+  color: #6b7280;
+}
+
+.modal-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+/* Booking Summary */
+.booking-summary {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+  height: 100%;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+}
+
+.summary-row:not(:last-child) {
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.summary-row .label {
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.summary-row .value {
+  font-weight: 500;
+  color: #111827;
+  font-size: 0.875rem;
+  text-align: right;
+}
+
+/* Contact row styles */
+.contact-row .label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.contact-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.contact-link {
+  color: #4f46e5;
+  text-decoration: none;
+  word-break: break-all;
+}
+
+.contact-link:hover {
+  text-decoration: underline;
+}
+
+/* Participants in Modal */
+.summary-row.participants-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.participants-modal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  width: 100%;
+  text-align: left;
+}
+
+.participant-modal-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.375rem 0.5rem;
+  background: white;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+}
+
+.participant-modal-item .participant-name {
+  color: #111827;
+  font-weight: 500;
+}
+
+.participant-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.375rem;
+  background: #e0e7ff;
+  color: #4f46e5;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Form Group */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.875rem;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.2s;
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-group input::placeholder,
+.form-group textarea::placeholder {
+  color: #9ca3af;
+}
+
+.form-group textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 80px;
+}
+
+/* Modal Actions */
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.btn-confirm {
+  flex: 2;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-confirm:hover {
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.btn-confirm svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  /* Hide desktop table on mobile */
+  .desktop-table {
+    display: none;
+  }
+
+  /* Show mobile cards */
+  .mobile-cards {
+    display: block;
+    padding: 1rem;
+  }
+
+  /* Modal - vertical layout on mobile */
+  .modal {
+    max-width: 420px;
+  }
+
+  .modal-content-wrapper {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .modal-left {
+    padding-right: 0;
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 1rem;
+  }
+
+  .modal-right {
+    padding-left: 0;
+  }
+
+  .booking-summary {
+    height: auto;
+  }
+
+  /* Time slot on mobile */
+  .time-grouped-view {
+    gap: 1rem;
+  }
+
+  .time-slot-group {
+    border-radius: 12px;
+  }
+
+  .time-slot-header {
+    padding: 0.75rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .time-slot-time .time-value {
+    font-size: 1.125rem;
+  }
+
+  .time-slot-stats {
+    gap: 0.75rem;
+  }
+
+  .time-slot-stats .stat-item {
+    font-size: 0.8125rem;
+  }
+
+  .time-slot-group .mobile-cards {
+    padding: 0.75rem;
+  }
+
+  /* Booking Card */
+  .booking-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+
+  .booking-card.done {
+    border-left: 4px solid #10b981;
+    background: #f0fdf4;
+  }
+
+  .booking-card.pending {
+    border-left: 4px solid #f59e0b;
+  }
+
+  .booking-card.urgent {
+    animation: pulse-urgent 2s infinite;
+    border-left-color: #dc2626;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  .card-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .card-date .date-main {
+    font-weight: 600;
+    color: #111827;
+  }
+
+  .card-body {
+    padding: 1rem;
+  }
+
+  .card-customer,
+  .card-tour,
+  .card-ref {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .card-customer:last-child,
+  .card-tour:last-child,
+  .card-ref:last-child {
+    margin-bottom: 0;
+  }
+
+  .card-customer svg,
+  .card-tour svg,
+  .card-ref svg {
+    width: 18px;
+    height: 18px;
+    color: #9ca3af;
+    flex-shrink: 0;
+  }
+
+  .card-customer span,
+  .card-tour span,
+  .card-ref span {
+    color: #374151;
+    font-size: 0.875rem;
+  }
+
+  .card-customer .pax-badge {
+    margin-left: auto;
+    font-size: 0.75rem;
+    min-width: auto;
+    height: 24px;
+    padding: 0 0.5rem;
+  }
+
+  .card-customer .pax-details {
+    margin-left: auto;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+  }
+
+  .card-tour {
+    flex-wrap: wrap;
+  }
+
+  .card-tour .product-badge {
+    margin-left: auto;
+  }
+
+  .card-ref span {
+    font-family: monospace;
+    color: #10b981;
+    font-weight: 600;
+  }
+
+  .card-notes {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: #f0f9ff;
+    border-radius: 8px;
+    margin-top: 0.5rem;
+  }
+
+  .card-notes svg {
+    width: 16px;
+    height: 16px;
+    color: #6366f1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .card-notes span {
+    font-size: 0.8125rem;
+    color: #4b5563;
+    line-height: 1.4;
+  }
+
+  /* Card Participants */
+  .card-participants {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.75rem;
+    background: #f0f4ff;
+    border-radius: 8px;
+  }
+
+  .card-participants svg {
+    width: 18px;
+    height: 18px;
+    color: #6366f1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .participants-list-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    flex: 1;
+  }
+
+  .participant-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: #374151;
+    font-weight: 500;
+  }
+
+  .participant-badge small {
+    color: #6366f1;
+    font-weight: 600;
+    font-size: 0.6875rem;
+  }
+
+  .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+  }
+
+  .booking-id {
+    font-size: 0.75rem;
+    color: #9ca3af;
+  }
+
+  .card-footer .action-btn {
+    padding: 0.625rem 1rem;
+  }
+
+  /* Modal on mobile */
+  .modal-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .modal {
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    padding: 1.25rem 1rem;
+  }
+
+  .modal-body {
+    padding: 1.25rem 1rem 2rem;
+  }
+
+  .modal-close {
+    top: 0.75rem;
+    right: 0.75rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-cards {
+    padding: 0.75rem;
+  }
+
+  .booking-card {
+    margin-bottom: 0.75rem;
+  }
+
+  .card-header,
+  .card-body,
+  .card-footer {
+    padding: 0.875rem;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+  }
+
+  .btn-cancel,
+  .btn-confirm {
+    width: 100%;
+  }
+}
+
+/* Mobile Polish - Improved Touch Targets */
+@media (max-width: 768px) {
+  /* Larger action buttons for touch */
+  .action-btn {
+    min-height: 44px;
+    padding: 0.625rem 1rem;
+    font-size: 0.9rem;
+  }
+
+  .sent-btn {
+    min-height: 44px;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+  }
+
+  .sent-btn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* Better card layout */
+  .card-actions {
+    gap: 0.625rem;
+  }
+
+  .card-footer {
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+
+  .card-footer .action-btn {
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* Larger modal close button */
+  .modal-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .modal-close svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  /* Better form inputs in modal */
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px; /* Prevents iOS zoom */
+    min-height: 48px;
+  }
+
+  /* Larger modal buttons */
+  .btn-cancel,
+  .btn-confirm {
+    min-height: 48px;
+    font-size: 1rem;
+  }
+
+  /* Better time slot header on mobile */
+  .time-slot-header {
+    padding: 0.875rem 1rem;
+  }
+
+  .time-slot-time .time-value {
+    font-size: 1.25rem;
+  }
+
+  /* Improved participant display */
+  .participant-badge {
+    padding: 0.25rem 0;
+  }
+
+  .card-participants {
+    padding: 0.875rem;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Stack action buttons on very small screens */
+  .actions-cell {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .card-footer .action-btn,
+  .card-footer .sent-btn {
+    min-width: unset;
+  }
+
+  /* Compact card on very small screens */
+  .card-customer-name {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .booking-id {
+    font-size: 0.6875rem;
+  }
+
+  /* Better status badge */
+  .status-badge {
+    font-size: 0.6875rem;
+    padding: 0.25rem 0.625rem;
+  }
+}
