@@ -11,6 +11,7 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 - **Frontend**: React 19 + Vite
 - **Database**: MySQL
 - **API Integration**: Bokun booking system
+- **Error Tracking**: Sentry (frontend)
 - **CI/CD**: GitHub Actions
 
 ## Project Structure
@@ -422,18 +423,24 @@ rm public/test.php
 - `database/migrations/2026_01_23_201052_add_audio_guide_to_bookings_table.php` - NEW audio guide columns
 
 ### Frontend Changes
+- `src/main.jsx` - Sentry initialization and ErrorBoundary wrapper
 - `src/App.jsx` - Added lazy loading
 - `src/config/products.js` - NEW product configuration file
 - `src/pages/Dashboard.jsx` - Uses product config
 - `src/components/BookingTable.jsx` - Audio guide badge & button, click-to-copy reference numbers, customer email/phone display
 - `src/components/BookingTable.css` - Purple audio guide badge with pulsing animation, click-to-copy styles
+- `.env.production` - Added `VITE_SENTRY_DSN`
+- `.env.example` - Added Sentry placeholder
+- `package.json` - Added `@sentry/react` dependency
 
 ### Latest Deployment (Jan 23, 2026)
-- Built frontend: `index-C5HAhPwS.js`, `index-DHlzghEP.css`, `Dashboard-SEcfnmoV.js/BwxpuCPC.css`
+- Built frontend: `index-Da--Kl2H.js` (with Sentry), `index-DHlzghEP.css`
+- Added Sentry error tracking to frontend
 - Added product ID `1135055` to production `.env`
 - Ran audio guide backfill (42 bookings with audio guide detected)
 - Database backup: `backup_20260123.sql`
 - All caches cleared on production
+- GYG API researched (not implemented - documented for future)
 
 ## Rate Limiting (Production)
 - Login: 5 requests per minute
@@ -591,10 +598,11 @@ git push origin master:main
 The production server at https://uffizi.deetech.cc is fully functional.
 
 ### Current Stats
-- **Database**: 609 bookings
+- **Database**: 609+ bookings
 - **Timed Entry Bookings**: 522
 - **With Audio Guide**: 42 (8%)
-- **Frontend Build**: `index-C5HAhPwS.js`, `Dashboard-SEcfnmoV.js`
+- **Frontend Build**: `index-Da--Kl2H.js` (with Sentry)
+- **Error Tracking**: Sentry enabled
 
 ### Previous Issues (Resolved)
 - **PDO Extension Issue**: Resolved by enabling PDO in Hostinger PHP configuration
@@ -602,6 +610,10 @@ The production server at https://uffizi.deetech.cc is fully functional.
 - **Customer Email/Phone Missing**: Fixed by updating BokunService and running full sync
 - **Product 1135055 Not Syncing**: Fixed by adding to `UFFIZI_PRODUCT_IDS` in production `.env`
 - **Audio Guide Not Displaying**: Fixed by running backfill command after migration
+
+### Pending / Future Work
+- **GYG Direct Integration**: Researched but not implemented (see GYG API section below)
+- **Participant Names for GYG Bookings**: Would require full GYG integration
 
 ---
 
@@ -654,4 +666,150 @@ mysql -u u803853690_uffizi -p u803853690_uffizi_tickets < backup_YYYYMMDD_HHMMSS
 
 # 2. Clear caches
 /opt/alt/php82/usr/bin/php artisan optimize:clear
+```
+
+---
+
+## Sentry Error Tracking
+
+Frontend errors are tracked using Sentry for production monitoring.
+
+### Configuration
+- **Package**: `@sentry/react`
+- **DSN**: Stored in `frontend/.env.production` as `VITE_SENTRY_DSN`
+- **Environment**: Auto-detects `development` / `production`
+- **Enabled**: Only in production builds (`import.meta.env.PROD`)
+
+### Features
+| Feature | Setting |
+|---------|---------|
+| Error Boundary | Wraps entire app with fallback UI |
+| Performance Monitoring | 10% transaction sampling |
+| Session Replay | 100% of error sessions recorded |
+| PII Collection | Enabled (`sendDefaultPii: true`) |
+
+### Files
+- `frontend/src/main.jsx` - Sentry initialization and ErrorBoundary
+- `frontend/.env.production` - Contains `VITE_SENTRY_DSN`
+- `frontend/.env.example` - Template with placeholder
+
+### Testing Sentry
+To verify Sentry is working, open browser console on production and run:
+```javascript
+Sentry.captureMessage("Test message from Uffizi app");
+```
+
+### Sentry Dashboard
+Access at: https://sentry.io (login required)
+
+---
+
+## GetYourGuide API Integration (Future Development)
+
+**Status**: RESEARCHED - Not implemented (Jan 2026)
+
+### Background
+GetYourGuide (GYG) bookings come through Bokun but are missing participant names. Direct GYG integration was researched to supplement this data.
+
+### Key Finding
+**The GYG Supplier API does NOT have an endpoint to FETCH booking details.**
+
+The API is push-based:
+- GYG pushes bookings TO your system (via `/1/book/`)
+- You push availability TO GYG (via `/1/notify-availability-update`)
+
+### GYG API Endpoints (Available)
+| Endpoint | Direction | Purpose |
+|----------|-----------|---------|
+| `/1/notify-availability-update` | You → GYG | Push availability changes |
+| `/1/deals` | You → GYG | Manage promotional deals |
+| `/1/redeem-ticket` | You → GYG | Mark ticket as used |
+| `/1/redeem-booking` | You → GYG | Mark booking as used |
+| `/1/suppliers` | You → GYG | Register new suppliers |
+| `/1/products/{id}/activate` | You → GYG | Reactivate deactivated products |
+
+### GYG API Endpoints (NOT Available)
+- ❌ `/1/bookings` - Does not exist
+- ❌ `/1/orders` - Does not exist
+- ❌ `/1/booking/{reference}` - Does not exist
+
+### To Receive GYG Bookings Directly
+Would require implementing these supplier-side endpoints:
+
+| Endpoint | Purpose | Required |
+|----------|---------|----------|
+| `/1/get-availabilities/` | GYG queries your availability | Yes |
+| `/1/reserve/` | Hold spots temporarily (60 min) | Yes |
+| `/1/cancel-reservation/` | Release held spots | Yes |
+| `/1/book/` | Confirm booking (includes traveler names!) | Yes |
+| `/1/cancel-booking/` | Handle cancellations | Yes |
+
+### GYG Credentials (Florence with Locals)
+
+**Integrator Portal**: https://integrator.getyourguide.com
+
+**Your API (GYG calls you)**:
+- Username: `Cristian`
+- Password: `DhanUk@458098`
+- Host: `supplier-api.getyourguide.com`
+- Path: `/1/`
+
+**GYG API (You call GYG)**:
+- Username: `FlorencewithLocals`
+- Password: `7fdb535c0d3b73be01565517fea54122`
+- Base URL: `https://supplier-api.getyourguide.com`
+- Sandbox URL: `https://supplier-api.getyourguide.com/sandbox`
+
+### GYG Testing Status
+Tests started but not completed (Dec 26, 2024):
+- Time point for Individuals - Started
+- Time period for Individuals - Started
+- Time point for Groups - Not started
+- Time period for Groups - Not started
+
+### Documentation Location
+All GYG API documentation saved in: `GYGAPI/` folder (gitignored)
+- `GYGAPI_Documents01.txt` - Overview documentation
+- `GYG_endpoints.txt` - GYG-side endpoints
+- `Suppler_ApiEndpoins.txt` - Supplier-side endpoints
+- `supplier-api-gyg-endpoints (1).yaml` - OpenAPI spec (GYG endpoints)
+- `supplier-api-supplier-endpoints (1).yaml` - OpenAPI spec (Supplier endpoints)
+- Various screenshots from Integrator Portal
+
+### Future Implementation Path
+1. Implement all 5 required endpoints in Laravel
+2. Pass GYG self-testing in Integrator Portal
+3. Set up production configuration
+4. Have GYG products mapped to your system
+5. Receive bookings with full traveler details
+
+### Alternative Solutions
+1. **Contact GYG Support**: Email `supplier-api@getyourguide.com` to ask about webhook-only integration
+2. **Bokun Webhooks**: Check if Bokun can provide more detailed GYG data via webhooks
+3. **Manual Process**: Continue using Bokun; manually check GYG Supplier Portal for participant names when needed
+
+### Why Not Implemented
+- Requires significant development (5 endpoints + testing)
+- Need to manage availability sync between systems
+- Current Bokun integration works for most needs
+- GYG participant names are "nice to have" not critical
+
+---
+
+## Git Tags / Restore Points
+
+| Tag | Commit | Description |
+|-----|--------|-------------|
+| `v1.0-pre-gyg` | `edf5b07` | Before GYG API research (Jan 23, 2026) |
+
+### Using Restore Points
+```bash
+# View all tags
+git tag -l
+
+# Checkout a specific tag
+git checkout v1.0-pre-gyg
+
+# Return to latest
+git checkout master
 ```
