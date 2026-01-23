@@ -88,11 +88,13 @@ class SyncBokunBookings extends Command
                     $participants = BokunService::extractParticipants($details);
                     $bookingChannel = BokunService::extractBookingChannel($details);
                     $customerContact = BokunService::extractCustomerContact($details);
+                    $hasAudioGuide = BokunService::extractHasAudioGuide($details, $booking->bokun_product_id);
 
-                    // Always save the booking channel and customer contact
+                    // Always save the booking channel, customer contact, and audio guide flag
                     $booking->booking_channel = $bookingChannel;
                     $booking->customer_email = $customerContact['email'];
                     $booking->customer_phone = $customerContact['phone'];
+                    $booking->has_audio_guide = $hasAudioGuide;
 
                     if (!empty($participants)) {
                         $booking->participants = $participants;
@@ -102,16 +104,18 @@ class SyncBokunBookings extends Command
                         // Show warning if participant count < pax (incomplete data)
                         $pax = $booking->pax;
                         $participantCount = count($participants);
+                        $audioGuideLabel = $hasAudioGuide ? ' [AUDIO GUIDE]' : '';
                         if ($participantCount < $pax) {
-                            $this->line("  ⚠ {$booking->bokun_booking_id}: {$participantCount}/{$pax} participants ({$bookingChannel})");
+                            $this->line("  ⚠ {$booking->bokun_booking_id}: {$participantCount}/{$pax} participants ({$bookingChannel}){$audioGuideLabel}");
                         } else {
-                            $this->line("  ✓ {$booking->bokun_booking_id}: {$participantCount} participants");
+                            $this->line("  ✓ {$booking->bokun_booking_id}: {$participantCount} participants{$audioGuideLabel}");
                         }
                     } else {
                         // Mark as empty array to avoid re-fetching
                         $booking->participants = [];
                         $booking->save();
-                        $this->line("  - {$booking->bokun_booking_id}: no participant data available ({$bookingChannel})");
+                        $audioGuideLabel = $hasAudioGuide ? ' [AUDIO GUIDE]' : '';
+                        $this->line("  - {$booking->bokun_booking_id}: no participant data available ({$bookingChannel}){$audioGuideLabel}");
                     }
                 }
 

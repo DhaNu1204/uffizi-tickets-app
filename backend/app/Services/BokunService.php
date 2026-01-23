@@ -444,6 +444,108 @@ class BokunService
     }
 
     /**
+     * Extract whether booking has audio guide from detailed booking response.
+     * Only applicable for Timed Entry Tickets (product 961802).
+     *
+     * Checks for rate code TG2 or rate ID 2263305 which indicates audio guide inclusion.
+     *
+     * @param array $bookingDetails The response from getBookingDetails()
+     * @param string|null $productId Optional product ID to check (if not in details)
+     * @return bool True if booking includes audio guide
+     */
+    public static function extractHasAudioGuide(array $bookingDetails, ?string $productId = null): bool
+    {
+        // Audio guide rate identifiers
+        $audioGuideRateId = '2263305';
+        $audioGuideRateCode = 'TG2';
+        $timedEntryProductId = '961802';
+
+        // Check if this is a timed entry product (only product with audio guide option)
+        $detectedProductId = $productId;
+
+        // Try to get product ID from booking details if not provided
+        if (!$detectedProductId) {
+            // Check activityBookings for product ID
+            if (isset($bookingDetails['activityBookings'][0]['activity']['id'])) {
+                $detectedProductId = (string) $bookingDetails['activityBookings'][0]['activity']['id'];
+            } elseif (isset($bookingDetails['productBookings'][0]['productId'])) {
+                $detectedProductId = (string) $bookingDetails['productBookings'][0]['productId'];
+            }
+        }
+
+        // Only timed entry tickets can have audio guides
+        if ($detectedProductId !== $timedEntryProductId) {
+            return false;
+        }
+
+        // Method 1: Check activityBookings → pricingCategoryBookings for rate info
+        if (isset($bookingDetails['activityBookings'])) {
+            foreach ($bookingDetails['activityBookings'] as $activity) {
+                if (isset($activity['pricingCategoryBookings'])) {
+                    foreach ($activity['pricingCategoryBookings'] as $pcb) {
+                        // Check rate ID
+                        $rateId = $pcb['rate']['id'] ?? $pcb['rateId'] ?? null;
+                        if ($rateId && (string) $rateId === $audioGuideRateId) {
+                            return true;
+                        }
+
+                        // Check rate code
+                        $rateCode = $pcb['rate']['internalName'] ?? $pcb['rate']['code'] ?? $pcb['rateCode'] ?? null;
+                        if ($rateCode && strtoupper($rateCode) === $audioGuideRateCode) {
+                            return true;
+                        }
+
+                        // Check pricing category for rate info
+                        $pricingCategory = $pcb['pricingCategory'] ?? [];
+                        $categoryRateId = $pricingCategory['rateId'] ?? null;
+                        if ($categoryRateId && (string) $categoryRateId === $audioGuideRateId) {
+                            return true;
+                        }
+                    }
+                }
+
+                // Check activity-level rate info
+                $activityRateId = $activity['rate']['id'] ?? $activity['rateId'] ?? null;
+                if ($activityRateId && (string) $activityRateId === $audioGuideRateId) {
+                    return true;
+                }
+            }
+        }
+
+        // Method 2: Check productBookings for rate info
+        if (isset($bookingDetails['productBookings'])) {
+            foreach ($bookingDetails['productBookings'] as $pb) {
+                $rateId = $pb['rate']['id'] ?? $pb['rateId'] ?? null;
+                if ($rateId && (string) $rateId === $audioGuideRateId) {
+                    return true;
+                }
+
+                $rateCode = $pb['rate']['internalName'] ?? $pb['rate']['code'] ?? $pb['rateCode'] ?? null;
+                if ($rateCode && strtoupper($rateCode) === $audioGuideRateCode) {
+                    return true;
+                }
+            }
+        }
+
+        // Method 3: Check top-level rate info
+        $topLevelRateId = $bookingDetails['rate']['id'] ?? $bookingDetails['rateId'] ?? null;
+        if ($topLevelRateId && (string) $topLevelRateId === $audioGuideRateId) {
+            return true;
+        }
+
+        // Method 4: Check items/lineItems for rate info (some booking structures use this)
+        $items = $bookingDetails['items'] ?? $bookingDetails['lineItems'] ?? [];
+        foreach ($items as $item) {
+            $itemRateId = $item['rate']['id'] ?? $item['rateId'] ?? null;
+            if ($itemRateId && (string) $itemRateId === $audioGuideRateId) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Debug method to log the full structure of a booking for investigation
      * Call this to see the actual API response structure
      */

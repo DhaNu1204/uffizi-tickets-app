@@ -58,6 +58,8 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 15. **Guide Assignment**: Assign guides to guided tour bookings
 16. **Booking Channel**: Tracks booking source (GetYourGuide, Viator, Direct, etc.)
 17. **Customer Contact**: Stores customer email and phone from bookings
+18. **Audio Guide Tracking**: Detects and displays audio guide bookings for Timed Entry tickets
+19. **Click-to-Copy References**: Click ticket reference numbers to copy to clipboard
 
 ## Bokun Product IDs
 - `961802`: Timed Entry Tickets
@@ -87,6 +89,8 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 | guide_name | varchar | Assigned guide for guided tours |
 | cancelled_at | timestamp | When booking was cancelled (null if active) |
 | tickets_sent_at | timestamp | When tickets were sent to client (null if not sent) |
+| has_audio_guide | boolean | Whether booking includes audio guide (Timed Entry only) |
+| audio_guide_sent_at | timestamp | When audio guide link was sent to client |
 
 ## API Endpoints
 - `POST /api/login` - Authentication
@@ -156,6 +160,8 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 - **Sync bookings**: Click "Sync Bokun" button (auto-syncs on page load)
 - **Add ticket reference**: Click "Add Ticket" → Enter Uffizi code → Status changes to "Purchased"
 - **Mark tickets sent**: After purchasing, click "Send" button → Changes to green "Sent" with timestamp
+- **Mark audio guide sent**: For audio guide bookings, click "Audio Sent" button after sending the link
+- **Copy reference number**: Click on any ticket reference number to copy to clipboard (shows "Copied!" confirmation)
 - **Filter by product**: Use dropdown in filters bar
 - **Navigate dates**: Use prev/next arrows or click date to open calendar
 - **View future bookings**: Open calendar to see booking counts per day
@@ -168,6 +174,13 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 4. Add notes if needed
 5. Send tickets to client via WhatsApp/Email
 6. Click "Send" button to mark as sent (tracks timestamp)
+7. For audio guide bookings (purple badge): Send audio guide link, then click "Audio Sent"
+
+### Audio Guide Workflow
+1. Look for purple **"Audio Guide"** badge on Timed Entry bookings
+2. After purchasing ticket, send the audio guide access link to client
+3. Click "Audio Sent" button to track that link was sent
+4. Button changes to solid purple with timestamp
 
 ## Time Zone Note
 - **Backend**: Bokun stores Florence local time as UTC in the database
@@ -212,6 +225,15 @@ App\Models\Booking::count();
 # Full sync (fetch ALL missing participants)
 /opt/alt/php82/usr/bin/php artisan bokun:sync --full
 
+# Backfill audio guide info for existing Timed Entry bookings
+/opt/alt/php82/usr/bin/php artisan bookings:backfill-audio-guide --limit=100
+
+# Backfill all (no limit)
+/opt/alt/php82/usr/bin/php artisan bookings:backfill-audio-guide --limit=1000
+
+# Dry run (preview without making changes)
+/opt/alt/php82/usr/bin/php artisan bookings:backfill-audio-guide --dry-run
+
 # Debug booking structure (for troubleshooting participant extraction)
 /opt/alt/php82/usr/bin/php artisan booking:debug GYG6H8LKF93A
 
@@ -254,6 +276,60 @@ php artisan tinker
 App\Models\Booking::onlyTrashed()->count();  # Count soft-deleted
 App\Models\Booking::onlyTrashed()->get(['bokun_booking_id', 'customer_name', 'cancelled_at']);
 ```
+
+## Audio Guide Feature
+
+Audio guide tracking is available for **Timed Entry Tickets** (product ID `961802`) only.
+
+### How It Works
+
+1. **Detection**: During sync, the system checks for rate code `TG2` or rate ID `2263305` which indicates audio guide inclusion
+2. **Display**: Bookings with audio guides show a purple **"Audio Guide"** badge with pulsing animation
+3. **Tracking**: After purchasing tickets, click "Audio Sent" button to mark when the audio guide link was sent
+
+### Audio Guide Rate Identifiers
+- **Rate ID**: `2263305`
+- **Rate Code**: `TG2`
+- **Product**: Timed Entry Tickets (`961802`) only
+
+### Database Fields
+| Column | Type | Description |
+|--------|------|-------------|
+| has_audio_guide | boolean | True if booking includes audio guide |
+| audio_guide_sent_at | timestamp | When audio guide link was sent |
+
+### Backfill Existing Bookings
+
+After deploying the audio guide feature, run the backfill command to update existing bookings:
+
+```bash
+# Check how many need backfill
+/opt/alt/php82/usr/bin/php artisan tinker --execute="echo App\Models\Booking::where('bokun_product_id', '961802')->count();"
+
+# Run backfill (processes bookings and calls Bokun API)
+/opt/alt/php82/usr/bin/php artisan bookings:backfill-audio-guide --limit=500
+
+# Preview without making changes
+/opt/alt/php82/usr/bin/php artisan bookings:backfill-audio-guide --dry-run --limit=50
+```
+
+### Check Audio Guide Bookings
+```bash
+# Via MySQL
+mysql -u u803853690_uffizi -p u803853690_uffizi_tickets -e "SELECT COUNT(*) as total, SUM(has_audio_guide) as with_audio FROM bookings WHERE bokun_product_id = '961802';"
+
+# Via tinker
+php artisan tinker
+App\Models\Booking::where('has_audio_guide', true)->count();
+App\Models\Booking::where('has_audio_guide', true)->where('tour_date', '>=', now())->get(['bokun_booking_id', 'tour_date']);
+```
+
+### Frontend Display
+- **Badge**: Purple gradient with pulsing animation (visible in booking row)
+- **Button**: "Audio Sent" button appears after ticket is purchased
+- **States**:
+  - Not sent: Purple outline button
+  - Sent: Solid purple button with timestamp on hover
 
 ## Update Ticket Modal
 
@@ -308,6 +384,17 @@ chmod 775 storage/logs/
 - Run: `php artisan bokun:sync --full` to fetch all contact info
 - Airbnb bookings won't have contact info (Airbnb doesn't share it)
 
+**8. Audio guide badge not showing**
+- After migration, existing bookings need backfill
+- Run: `php artisan bookings:backfill-audio-guide --limit=1000`
+- Only applies to Timed Entry Tickets (product 961802)
+- New bookings automatically detect audio guide during sync
+
+**9. New product bookings not syncing**
+- Check if product ID is in `UFFIZI_PRODUCT_IDS` in production `.env`
+- Clear config cache after updating: `php artisan config:clear`
+- Run sync: `php artisan bokun:sync --limit=100`
+
 ### Checking Server Logs
 ```bash
 # Laravel log
@@ -323,24 +410,29 @@ rm public/test.php
 
 ### Backend Changes (Jan 2026)
 - `routes/api.php` - Added rate limiting, removed debug routes
-- `app/Http/Controllers/BookingController.php` - Added caching, improved sync, cancellation handling
-- `app/Services/BokunService.php` - Enhanced participant extraction, customer contact extraction
-- `app/Console/Commands/SyncBokunBookings.php` - Added --limit option, cancellation detection
+- `app/Http/Controllers/BookingController.php` - Added caching, improved sync, cancellation handling, audio guide toggle
+- `app/Services/BokunService.php` - Enhanced participant extraction, customer contact extraction, `extractHasAudioGuide()` method
+- `app/Console/Commands/SyncBokunBookings.php` - Added --limit option, cancellation detection, audio guide detection during sync
+- `app/Console/Commands/BackfillAudioGuide.php` - NEW command for backfilling audio guide info
 - `app/Console/Commands/DebugBookingStructure.php` - NEW debug command
+- `app/Models/Booking.php` - Added `has_audio_guide`, `audio_guide_sent_at` fields
 - `config/cors.php` - Updated CORS allowed origins for local development (ports 5173-5175)
 - `database/migrations/2026_01_01_000001_add_composite_index_to_bookings.php` - NEW index
 - `database/migrations/2026_01_04_*` - Added booking_channel, guide_name, customer_email, customer_phone
+- `database/migrations/2026_01_23_201052_add_audio_guide_to_bookings_table.php` - NEW audio guide columns
 
 ### Frontend Changes
 - `src/App.jsx` - Added lazy loading
 - `src/config/products.js` - NEW product configuration file
 - `src/pages/Dashboard.jsx` - Uses product config
-- `src/components/BookingTable.jsx` - Modal displays customer email/phone with clickable links
+- `src/components/BookingTable.jsx` - Audio guide badge & button, click-to-copy reference numbers, customer email/phone display
+- `src/components/BookingTable.css` - Purple audio guide badge with pulsing animation, click-to-copy styles
 
-### Latest Deployment (Jan 4, 2026)
-- Built frontend: `index-B35f6sNz.js`, `index-BpckroFc.css`, `Dashboard-*.js/css`
-- Uploaded updated `cors.php` to production
-- Database backup created before deployment
+### Latest Deployment (Jan 23, 2026)
+- Built frontend: `index-C5HAhPwS.js`, `index-DHlzghEP.css`, `Dashboard-SEcfnmoV.js/BwxpuCPC.css`
+- Added product ID `1135055` to production `.env`
+- Ran audio guide backfill (42 bookings with audio guide detected)
+- Database backup: `backup_20260123.sql`
 - All caches cleared on production
 
 ## Rate Limiting (Production)
@@ -494,18 +586,22 @@ git push origin master:main
 
 ## Production Status
 
-**Status**: OPERATIONAL (Last deployed: Jan 7, 2026)
+**Status**: OPERATIONAL (Last deployed: Jan 23, 2026)
 
 The production server at https://uffizi.deetech.cc is fully functional.
 
 ### Current Stats
-- **Database**: 434 bookings
-- **Frontend Build**: `index-DM-R9y2C.js`, `index-DHlzghEP.css`
+- **Database**: 609 bookings
+- **Timed Entry Bookings**: 522
+- **With Audio Guide**: 42 (8%)
+- **Frontend Build**: `index-C5HAhPwS.js`, `Dashboard-SEcfnmoV.js`
 
 ### Previous Issues (Resolved)
 - **PDO Extension Issue**: Resolved by enabling PDO in Hostinger PHP configuration
 - **Guide Name Not Saving**: Fixed by updating Booking model `$fillable` array
 - **Customer Email/Phone Missing**: Fixed by updating BokunService and running full sync
+- **Product 1135055 Not Syncing**: Fixed by adding to `UFFIZI_PRODUCT_IDS` in production `.env`
+- **Audio Guide Not Displaying**: Fixed by running backfill command after migration
 
 ---
 

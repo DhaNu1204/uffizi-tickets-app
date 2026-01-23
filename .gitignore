@@ -95,3 +95,8 @@ nul
 # ===================
 coverage/
 .nyc_output/
+
+# ===================
+# Project Specific
+# ===================
+GYGAPI/

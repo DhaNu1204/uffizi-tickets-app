@@ -26,8 +26,10 @@ class Booking extends Model
         'reference_number',
         'notes',
         'guide_name',
+        'has_audio_guide',
         'cancelled_at',
         'tickets_sent_at',
+        'audio_guide_sent_at',
     ];
 
     protected $appends = ['has_incomplete_participants'];
@@ -36,8 +38,10 @@ class Booking extends Model
         'tour_date' => 'datetime',
         'pax_details' => 'array',
         'participants' => 'array',
+        'has_audio_guide' => 'boolean',
         'cancelled_at' => 'datetime',
         'tickets_sent_at' => 'datetime',
+        'audio_guide_sent_at' => 'datetime',
     ];
 
     /**
@@ -65,10 +69,42 @@ class Booking extends Model
     public const GUIDED_TOUR_IDS = ['961801', '962885', '962886', '1130528', '1135055'];
 
     /**
+     * Timed Entry Ticket product ID (only product with audio guide option)
+     */
+    public const TIMED_ENTRY_PRODUCT_ID = '961802';
+
+    /**
+     * Audio guide rate IDs and codes for Timed Entry Tickets
+     * Rate 2263305 (TG2) = Entry Ticket + Audio Guide
+     * Rate 1861234 (TG1) = Entry Ticket ONLY
+     */
+    public const AUDIO_GUIDE_RATE_ID = '2263305';
+    public const AUDIO_GUIDE_RATE_CODE = 'TG2';
+    public const TICKET_ONLY_RATE_ID = '1861234';
+    public const TICKET_ONLY_RATE_CODE = 'TG1';
+
+    /**
      * Check if this booking is a guided tour (requires guide assignment)
      */
     public function isGuidedTour(): bool
     {
         return in_array((string) $this->bokun_product_id, self::GUIDED_TOUR_IDS);
+    }
+
+    /**
+     * Check if this booking is a timed entry ticket (can have audio guide)
+     */
+    public function isTimedEntry(): bool
+    {
+        return (string) $this->bokun_product_id === self::TIMED_ENTRY_PRODUCT_ID;
+    }
+
+    /**
+     * Check if audio guide can be applicable to this booking
+     * (Only timed entry tickets can have audio guides)
+     */
+    public function canHaveAudioGuide(): bool
+    {
+        return $this->isTimedEntry();
     }
 }

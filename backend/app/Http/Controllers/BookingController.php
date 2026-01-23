@@ -132,7 +132,7 @@ class BookingController extends Controller
     }
 
     /**
-     * Update booking status, reference number, notes, guide name, and tickets sent status.
+     * Update booking status, reference number, notes, guide name, tickets sent, and audio guide sent status.
      */
     public function update(Request $request, $id)
     {
@@ -145,6 +145,7 @@ class BookingController extends Controller
             'notes' => 'nullable|string|max:1000',
             'guide_name' => 'nullable|string|max:100',
             'tickets_sent' => 'sometimes|boolean',
+            'audio_guide_sent' => 'sometimes|boolean',
         ]);
 
         $booking = Booking::findOrFail($id);
@@ -173,6 +174,10 @@ class BookingController extends Controller
         // Handle tickets_sent toggle
         if (isset($validated['tickets_sent'])) {
             $booking->tickets_sent_at = $validated['tickets_sent'] ? Carbon::now() : null;
+        }
+        // Handle audio_guide_sent toggle (only for bookings with audio guides)
+        if (isset($validated['audio_guide_sent'])) {
+            $booking->audio_guide_sent_at = $validated['audio_guide_sent'] ? Carbon::now() : null;
         }
 
         $booking->save();

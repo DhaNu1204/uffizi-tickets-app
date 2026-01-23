@@ -4,12 +4,17 @@ import './BookingTable.css';
 // Guided tour product IDs that require a guide assignment
 const GUIDED_TOUR_IDS = ['961801', '962885', '962886', '1130528', '1135055'];
 
+// Timed Entry product ID (only product with audio guide option)
+const TIMED_ENTRY_PRODUCT_ID = '961802';
+
 const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTypes = [] }) => {
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [refInput, setRefInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
   const [guideInput, setGuideInput] = useState('');
-  const [sendingId, setSendingId] = useState(null); // Track which booking is being toggled
+  const [sendingId, setSendingId] = useState(null); // Track which booking ticket is being toggled
+  const [sendingAudioGuideId, setSendingAudioGuideId] = useState(null); // Track audio guide toggle
+  const [copiedRef, setCopiedRef] = useState(null); // Track which reference was copied
 
   // Get short product type label
   const getProductType = (productId) => {
@@ -70,6 +75,35 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
       });
     } finally {
       setSendingId(null);
+    }
+  };
+
+  // Handle toggle audio guide sent
+  const handleToggleAudioGuideSent = async (booking) => {
+    setSendingAudioGuideId(booking.id);
+    try {
+      await onUpdate(booking.id, {
+        audio_guide_sent: !booking.audio_guide_sent_at,
+      });
+    } finally {
+      setSendingAudioGuideId(null);
+    }
+  };
+
+  // Check if booking has audio guide
+  const hasAudioGuide = (booking) => {
+    return booking.has_audio_guide && String(booking.bokun_product_id) === TIMED_ENTRY_PRODUCT_ID;
+  };
+
+  // Copy reference number to clipboard
+  const handleCopyRef = async (refNumber) => {
+    try {
+      await navigator.clipboard.writeText(refNumber);
+      setCopiedRef(refNumber);
+      // Reset after 2 seconds
+      setTimeout(() => setCopiedRef(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
     }
   };
 
@@ -205,6 +239,9 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
               {isTour(booking.bokun_product_id) && (
                 <span className="product-badge tour">{getProductType(booking.bokun_product_id) || 'Tour'}</span>
               )}
+              {hasAudioGuide(booking) && (
+                <span className="product-badge audio-guide" title="Includes Audio Guide">Audio Guide</span>
+              )}
             </div>
             <span className="tour-id">#{booking.bokun_booking_id}</span>
             {isGuidedTour(booking.bokun_product_id) && (
@@ -252,9 +289,17 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
           </span>
         </td>
         <td>
-          <span className={booking.reference_number ? 'ref-number' : 'ref-empty'}>
-            {booking.reference_number || '-'}
-          </span>
+          {booking.reference_number ? (
+            <span
+              className={`ref-number clickable ${copiedRef === booking.reference_number ? 'copied' : ''}`}
+              onClick={() => handleCopyRef(booking.reference_number)}
+              title="Click to copy"
+            >
+              {copiedRef === booking.reference_number ? 'Copied!' : booking.reference_number}
+            </span>
+          ) : (
+            <span className="ref-empty">-</span>
+          )}
         </td>
         <td>
           <div className="actions-cell">
@@ -284,6 +329,30 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                   </svg>
                 )}
                 <span>{booking.tickets_sent_at ? 'Sent' : 'Send'}</span>
+              </button>
+            )}
+            {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
+              <button
+                className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
+                onClick={() => handleToggleAudioGuideSent(booking)}
+                disabled={sendingAudioGuideId === booking.id}
+                title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
+              >
+                {sendingAudioGuideId === booking.id ? (
+                  <span className="btn-spinner"></span>
+                ) : booking.audio_guide_sent_at ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
+                  </svg>
+                )}
+                <span>{booking.audio_guide_sent_at ? 'AG Sent' : 'AG Send'}</span>
               </button>
             )}
           </div>
@@ -344,6 +413,9 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
             {isTour(booking.bokun_product_id) && (
               <span className="product-badge tour">{getProductType(booking.bokun_product_id) || 'Tour'}</span>
             )}
+            {hasAudioGuide(booking) && (
+              <span className="product-badge audio-guide" title="Includes Audio Guide">Audio Guide</span>
+            )}
           </div>
 
           {isGuidedTour(booking.bokun_product_id) && (
@@ -359,12 +431,16 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
           )}
 
           {booking.reference_number && (
-            <div className="card-ref">
+            <div
+              className={`card-ref clickable ${copiedRef === booking.reference_number ? 'copied' : ''}`}
+              onClick={() => handleCopyRef(booking.reference_number)}
+              title="Click to copy"
+            >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <polyline points="9 11 12 14 22 4" />
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
               </svg>
-              <span>Ref: {booking.reference_number}</span>
+              <span>{copiedRef === booking.reference_number ? 'Copied!' : `Ref: ${booking.reference_number}`}</span>
             </div>
           )}
 
@@ -407,6 +483,29 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M22 2L11 13" />
                     <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                  </svg>
+                )}
+              </button>
+            )}
+            {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
+              <button
+                className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
+                onClick={() => handleToggleAudioGuideSent(booking)}
+                disabled={sendingAudioGuideId === booking.id}
+                title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
+              >
+                {sendingAudioGuideId === booking.id ? (
+                  <span className="btn-spinner"></span>
+                ) : booking.audio_guide_sent_at ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                    <line x1="12" y1="19" x2="12" y2="23" />
+                    <line x1="8" y1="23" x2="16" y2="23" />
                   </svg>
                 )}
               </button>
@@ -531,6 +630,9 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                           {isTour(booking.bokun_product_id) && (
                             <span className="product-badge tour">{getProductType(booking.bokun_product_id) || 'Tour'}</span>
                           )}
+                          {hasAudioGuide(booking) && (
+                            <span className="product-badge audio-guide" title="Includes Audio Guide">Audio Guide</span>
+                          )}
                         </div>
                         <span className="tour-id">#{booking.bokun_booking_id}</span>
                         {isGuidedTour(booking.bokun_product_id) && (
@@ -578,9 +680,17 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                       </span>
                     </td>
                     <td>
-                      <span className={booking.reference_number ? 'ref-number' : 'ref-empty'}>
-                        {booking.reference_number || '-'}
-                      </span>
+                      {booking.reference_number ? (
+                        <span
+                          className={`ref-number clickable ${copiedRef === booking.reference_number ? 'copied' : ''}`}
+                          onClick={() => handleCopyRef(booking.reference_number)}
+                          title="Click to copy"
+                        >
+                          {copiedRef === booking.reference_number ? 'Copied!' : booking.reference_number}
+                        </span>
+                      ) : (
+                        <span className="ref-empty">-</span>
+                      )}
                     </td>
                     <td>
                       <div className="actions-cell">
@@ -610,6 +720,30 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                               </svg>
                             )}
                             <span>{booking.tickets_sent_at ? 'Sent' : 'Send'}</span>
+                          </button>
+                        )}
+                        {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
+                          <button
+                            className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
+                            onClick={() => handleToggleAudioGuideSent(booking)}
+                            disabled={sendingAudioGuideId === booking.id}
+                            title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
+                          >
+                            {sendingAudioGuideId === booking.id ? (
+                              <span className="btn-spinner"></span>
+                            ) : booking.audio_guide_sent_at ? (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="20 6 9 17 4 12" />
+                              </svg>
+                            ) : (
+                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                                <line x1="12" y1="19" x2="12" y2="23" />
+                                <line x1="8" y1="23" x2="16" y2="23" />
+                              </svg>
+                            )}
+                            <span>{booking.audio_guide_sent_at ? 'AG Sent' : 'AG Send'}</span>
                           </button>
                         )}
                       </div>
@@ -662,6 +796,9 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                         <line x1="3" y1="10" x2="21" y2="10" />
                       </svg>
                       <span>{booking.product_name}</span>
+                      {hasAudioGuide(booking) && (
+                        <span className="product-badge audio-guide" title="Includes Audio Guide">Audio Guide</span>
+                      )}
                     </div>
 
                     {isGuidedTour(booking.bokun_product_id) && (
@@ -703,6 +840,29 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M22 2L11 13" />
                               <path d="M22 2L15 22L11 13L2 9L22 2Z" />
+                            </svg>
+                          )}
+                        </button>
+                      )}
+                      {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
+                        <button
+                          className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
+                          onClick={() => handleToggleAudioGuideSent(booking)}
+                          disabled={sendingAudioGuideId === booking.id}
+                          title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
+                        >
+                          {sendingAudioGuideId === booking.id ? (
+                            <span className="btn-spinner"></span>
+                          ) : booking.audio_guide_sent_at ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                              <line x1="12" y1="19" x2="12" y2="23" />
+                              <line x1="8" y1="23" x2="16" y2="23" />
                             </svg>
                           )}
                         </button>
