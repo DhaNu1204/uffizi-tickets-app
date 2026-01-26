@@ -16,14 +16,14 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 ```
 /Uffizi-Ticket-App
 ├── backend/                    # Laravel API
-│   ├── app/Http/Controllers/   # BookingController, MessageController, ManualMessageController
-│   ├── app/Models/             # Booking, Message, MessageTemplate, etc.
-│   ├── app/Services/           # BokunService, MessagingService, ManualMessageService
+│   ├── app/Http/Controllers/   # BookingController, MessageController, ConversationController
+│   ├── app/Models/             # Booking, Message, Conversation, MessageTemplate
+│   ├── app/Services/           # BokunService, TwilioService, IncomingMessageService
 │   ├── routes/api.php          # API routes
 │   └── database/migrations/    # DB schema
 ├── frontend/                   # React SPA
 │   ├── src/components/         # BookingTable, TicketWizard/, ManualSendModal
-│   ├── src/pages/              # Dashboard, TemplateAdmin
+│   ├── src/pages/              # Dashboard, TemplateAdmin, ConversationsPage
 │   └── src/services/api.js     # API client
 ├── docs/                       # Extended documentation
 │   ├── TROUBLESHOOTING.md      # Common issues and fixes
@@ -39,6 +39,7 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 - Ticket tracking (PENDING_TICKET / TICKET_PURCHASED)
 - 6-step Ticket Sending Wizard (Timed Entry only)
 - Multi-channel messaging (WhatsApp, SMS, Email) with auto-detection
+- **Conversations** - View and reply to customer WhatsApp/SMS replies
 - **Manual Send** - Send messages to any phone/email without a booking
 - 10-language templates with phone-based auto-detection
 - Audio guide tracking and PDF attachments
@@ -60,7 +61,8 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 | Table | Purpose |
 |-------|---------|
 | bookings | Tour bookings from Bokun |
-| messages | Sent ticket messages |
+| conversations | WhatsApp/SMS conversation threads |
+| messages | Sent/received messages (direction: outbound/inbound) |
 | message_templates | Multi-language templates |
 | message_attachments | PDF attachments |
 | users | Admin authentication |
@@ -87,6 +89,16 @@ See `docs/DATABASE.md` for detailed schema.
 | GET | /api/templates/languages | Supported languages |
 | POST | /api/messages/send-manual | Send manual message (no booking) |
 | GET | /api/messages/manual-history | Get manual message history |
+
+### Conversations (WhatsApp/SMS Inbox)
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| GET | /api/conversations | List conversations |
+| GET | /api/conversations/{id} | Get conversation with messages |
+| POST | /api/conversations/{id}/reply | Send reply |
+| PUT | /api/conversations/{id}/read | Mark as read |
+| DELETE | /api/conversations/{id} | Archive conversation |
+| POST | /api/webhooks/twilio/incoming | Incoming webhook (public) |
 
 ### Attachments & Templates
 | Method | Endpoint | Purpose |
@@ -148,6 +160,7 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 - **Sync bookings**: Click "Sync Bokun" button (auto-syncs on load)
 - **Add ticket**: Click "Add Ticket" > Enter Uffizi code
 - **Send ticket (wizard)**: Click "Send Ticket" > 6-step wizard
+- **View conversations**: Username dropdown > "Conversations"
 - **Manual send**: Username dropdown > "Manual Send" (any phone/email)
 - **Mark audio sent**: Click "Audio Sent" for audio guide bookings
 - **Copy reference**: Click reference number to copy
@@ -185,6 +198,23 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 - Phone numbers require 11-15 digits (e.g., +39 333 123 4567)
 - Messages logged in database with `booking_id = null`
 - Rate limited to 10 messages per minute
+
+### Conversations (Reply to Customers)
+1. Click username dropdown > "Conversations"
+2. Select a conversation from the left panel
+3. View message history (outbound = purple, inbound = gray)
+4. Type reply and click Send (or press Enter)
+5. Archive completed conversations
+
+**WhatsApp 24-Hour Window**:
+- After customer messages, you can reply freely for 24 hours
+- After 24 hours, the window expires and customer must message first
+- Warning banner shows when window is expiring
+- SMS has no time restrictions
+
+**Auto-Linking**:
+- Incoming messages auto-match to bookings by phone number
+- Can manually link conversation to a booking if needed
 
 ## Ticket Sending Wizard
 
@@ -285,6 +315,7 @@ ssh -p 65002 u803853690@82.25.82.111 "cd /home/.../uffizi/backend && /opt/alt/ph
 | `CLAUDE.local.md.example` | Local dev settings template |
 
 ## Recent Changes (Jan 2026)
+- **Conversations page** - View and reply to customer WhatsApp/SMS messages
 - Ticket Sending Wizard (6 steps)
 - Multi-channel messaging (WhatsApp, SMS, Email)
 - **Manual Send feature** - Send to any phone/email without booking
@@ -293,6 +324,15 @@ ssh -p 65002 u803853690@82.25.82.111 "cd /home/.../uffizi/backend && /opt/alt/ph
 - PDF attachments via S3
 - Audio guide tracking
 - Sentry error tracking
+
+## Twilio Webhook Configuration
+Configure these URLs in Twilio Console:
+
+| Webhook | URL |
+|---------|-----|
+| WhatsApp Incoming | `https://uffizi.deetech.cc/api/webhooks/twilio/incoming` |
+| SMS Incoming | `https://uffizi.deetech.cc/api/webhooks/twilio/incoming` |
+| Status Callback | `https://uffizi.deetech.cc/api/webhooks/twilio/status` |
 
 ---
 

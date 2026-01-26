@@ -34,9 +34,12 @@ class Booking extends Model
         'audio_guide_username',
         'audio_guide_password',
         'audio_guide_url',
+        'wizard_started_at',
+        'wizard_last_step',
+        'wizard_abandoned_at',
     ];
 
-    protected $appends = ['has_incomplete_participants'];
+    protected $appends = ['has_incomplete_participants', 'wizard_status'];
 
     protected $casts = [
         'tour_date' => 'datetime',
@@ -46,6 +49,9 @@ class Booking extends Model
         'cancelled_at' => 'datetime',
         'tickets_sent_at' => 'datetime',
         'audio_guide_sent_at' => 'datetime',
+        'wizard_started_at' => 'datetime',
+        'wizard_last_step' => 'integer',
+        'wizard_abandoned_at' => 'datetime',
     ];
 
     /**
@@ -121,6 +127,14 @@ class Booking extends Model
     }
 
     /**
+     * Get conversations for this booking
+     */
+    public function conversations(): HasMany
+    {
+        return $this->hasMany(Conversation::class);
+    }
+
+    /**
      * Get attachments for this booking
      */
     public function attachments(): HasMany
@@ -167,5 +181,52 @@ class Booking extends Model
             'audio_guide_username' => $this->audio_guide_username ?? '',
             'audio_guide_password' => $this->audio_guide_password ?? '',
         ];
+    }
+
+    /**
+     * Get wizard status for display
+     * Returns: null (not started), 'in_progress', 'abandoned', 'completed'
+     */
+    public function getWizardStatusAttribute(): ?array
+    {
+        // If tickets already sent, wizard is completed
+        if ($this->tickets_sent_at) {
+            return [
+                'status' => 'completed',
+                'step' => 6,
+                'label' => 'Sent',
+            ];
+        }
+
+        // If wizard was never started
+        if (!$this->wizard_started_at) {
+            return null;
+        }
+
+        // If wizard was abandoned (closed without completing)
+        if ($this->wizard_abandoned_at) {
+            return [
+                'status' => 'abandoned',
+                'step' => $this->wizard_last_step,
+                'label' => "Step {$this->wizard_last_step}/6",
+            ];
+        }
+
+        // Wizard in progress (started but not abandoned or completed)
+        return [
+            'status' => 'in_progress',
+            'step' => $this->wizard_last_step,
+            'label' => "Step {$this->wizard_last_step}/6",
+        ];
+    }
+
+    /**
+     * Check if wizard needs attention (abandoned without sending)
+     */
+    public function needsWizardAttention(): bool
+    {
+        return $this->isTimedEntry()
+            && !$this->tickets_sent_at
+            && $this->wizard_abandoned_at !== null;
     }
 }

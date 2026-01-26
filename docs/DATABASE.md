@@ -4,7 +4,8 @@
 
 The application uses MySQL with the following main tables:
 - `bookings` - Tour bookings synced from Bokun
-- `messages` - Sent ticket messages (WhatsApp, SMS, Email)
+- `conversations` - WhatsApp/SMS conversation threads
+- `messages` - Sent/received messages (WhatsApp, SMS, Email)
 - `message_templates` - Multi-language message templates
 - `message_attachments` - PDF ticket attachments
 - `users` - Admin users (Laravel Sanctum auth)
@@ -52,17 +53,49 @@ Main table storing tour bookings synced from Bokun API.
 
 ---
 
+### conversations
+
+WhatsApp/SMS conversation threads with customers.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | bigint | Primary key |
+| phone_number | varchar(20) | E.164 format phone number |
+| channel | enum | whatsapp or sms |
+| booking_id | bigint | Foreign key to bookings (nullable) |
+| status | enum | active or archived |
+| last_message_at | timestamp | When last message was sent/received |
+| unread_count | int | Number of unread incoming messages |
+| created_at | timestamp | Record creation time |
+| updated_at | timestamp | Last update time |
+
+**Indexes**:
+- `phone_number`, `channel` (unique composite)
+- `status`
+- `last_message_at`
+- `unread_count`
+
+**WhatsApp 24-Hour Window**:
+- After customer sends a message, business can reply freely for 24 hours
+- After 24 hours, must use pre-approved templates
+- `last_message_at` of inbound messages determines window expiry
+
+---
+
 ### messages
 
-Records of all sent messages for ticket delivery and manual sends.
+Records of all sent/received messages for ticket delivery, manual sends, and conversations.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | bigint | Primary key |
 | booking_id | bigint | Foreign key to bookings (nullable for manual sends) |
+| conversation_id | bigint | Foreign key to conversations (nullable) |
 | channel | varchar | whatsapp, sms, or email |
+| direction | enum | outbound (sent by us) or inbound (from customer) |
 | external_id | varchar | Twilio SID or mail ID |
 | recipient | varchar | Phone number or email address |
+| sender_name | varchar | Customer name (for inbound, from WhatsApp profile) |
 | subject | varchar | Email subject (null for WhatsApp/SMS) |
 | content | text | Message content |
 | template_id | bigint | Foreign key to message_templates (nullable) |
@@ -80,13 +113,18 @@ Records of all sent messages for ticket delivery and manual sends.
 
 **Indexes**:
 - `booking_id` (foreign key, nullable - allows null for manual messages)
+- `conversation_id` (foreign key, nullable)
 - `channel`
+- `direction`
 - `status`
 - `external_id`
+- `conversation_id`, `created_at` (composite for conversation messages)
 
-**Manual Messages**:
-Messages with `booking_id = null` are manual sends created via the Manual Send feature.
-Query manual messages: `SELECT * FROM messages WHERE booking_id IS NULL`
+**Message Types**:
+- Manual messages: `booking_id = null`, `conversation_id = null`
+- Wizard messages: `booking_id = X`, may have `conversation_id`
+- Conversation replies: `conversation_id = X`, may have `booking_id`
+- Inbound messages: `direction = 'inbound'`, always have `conversation_id`
 
 ---
 
@@ -187,6 +225,8 @@ Migration files are located at `backend/database/migrations/`:
 | `2026_01_25_100003_create_message_attachments_table.php` | PDF attachments |
 | `2026_01_25_200001_add_template_type_to_message_templates.php` | Template types |
 | `2026_01_26_130000_make_booking_id_nullable_in_messages_table.php` | Allow manual sends |
+| `2026_01_27_000001_create_conversations_table.php` | Conversation threads |
+| `2026_01_27_000002_add_conversation_fields_to_messages.php` | Add direction, conversation_id to messages |
 
 ---
 

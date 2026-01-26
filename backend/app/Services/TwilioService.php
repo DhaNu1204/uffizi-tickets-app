@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Booking;
+use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\MessageAttachment;
 use App\Models\MessageTemplate;
@@ -42,38 +43,57 @@ class TwilioService
     }
 
     /**
-     * Check if phone number has WhatsApp
-     * Uses Twilio Lookup API
+     * Check if phone number likely has WhatsApp
+     *
+     * NOTE: We cannot actually verify if a specific number has WhatsApp installed.
+     * Twilio Lookup only tells us if it's a mobile number, not if WhatsApp is active.
+     *
+     * Strategy: Default to false (use Email+SMS) for safety.
+     * WhatsApp is only assumed for countries where it's extremely common (EU, Americas).
+     * For countries where other apps dominate (China=WeChat, Japan=Line), default to Email.
      */
     public function hasWhatsApp(string $phoneNumber): bool
     {
+        $phone = $this->formatPhoneNumber($phoneNumber);
+
+        // Countries where WhatsApp is NOT common (use Email+SMS instead)
+        $nonWhatsAppCountries = [
+            '+86',   // China (WeChat dominant)
+            '+81',   // Japan (Line dominant)
+            '+82',   // South Korea (KakaoTalk dominant)
+            '+7',    // Russia (Telegram dominant)
+            '+1',    // USA/Canada (SMS still common, iMessage)
+        ];
+
+        foreach ($nonWhatsAppCountries as $prefix) {
+            if (str_starts_with($phone, $prefix)) {
+                Log::info('WhatsApp skipped for country', ['phone' => $phone, 'prefix' => $prefix]);
+                return false;
+            }
+        }
+
+        // For European and other countries, try Twilio Lookup
         try {
             $client = $this->getClient();
-
-            // Clean phone number
-            $phone = $this->formatPhoneNumber($phoneNumber);
 
             // Use Lookup API with line type intelligence
             $lookup = $client->lookups->v2->phoneNumbers($phone)
                 ->fetch(['fields' => 'line_type_intelligence']);
 
-            // Check if mobile (WhatsApp typically works on mobile)
+            // Check if mobile (WhatsApp typically works on mobile in WhatsApp-common regions)
             $lineType = $lookup->lineTypeIntelligence['type'] ?? null;
-
-            // WhatsApp is typically available on mobile numbers
-            // This is a heuristic - not 100% accurate
             $mobileTypes = ['mobile', 'voip'];
 
             return in_array($lineType, $mobileTypes, true);
 
         } catch (TwilioException $e) {
-            Log::warning('WhatsApp lookup failed', [
+            Log::warning('WhatsApp lookup failed, defaulting to Email+SMS', [
                 'phone' => $phoneNumber,
                 'error' => $e->getMessage(),
             ]);
 
-            // Default to assuming WhatsApp is available for mobile-looking numbers
-            return $this->looksLikeMobile($phoneNumber);
+            // Default to false (Email+SMS) - safer than assuming WhatsApp works
+            return false;
         }
     }
 
@@ -343,5 +363,82 @@ class TwilioService
             'recipient' => $this->formatPhoneNumber($booking->customer_phone ?? ''),
             'channel' => 'sms',
         ];
+    }
+
+    /**
+     * Send a reply message in a conversation
+     */
+    public function sendReply(Conversation $conversation, string $content): Message
+    {
+        $phone = $conversation->phone_number;
+
+        // Create message record
+        $message = Message::create([
+            'conversation_id' => $conversation->id,
+            'booking_id' => $conversation->booking_id,
+            'channel' => $conversation->channel,
+            'direction' => Message::DIRECTION_OUTBOUND,
+            'recipient' => $phone,
+            'content' => $content,
+            'status' => Message::STATUS_PENDING,
+        ]);
+
+        try {
+            $message->markQueued();
+
+            $client = $this->getClient();
+
+            // Build message options based on channel
+            if ($conversation->channel === Conversation::CHANNEL_WHATSAPP) {
+                $options = [
+                    'from' => "whatsapp:{$this->whatsappFrom}",
+                    'body' => $content,
+                ];
+
+                $to = "whatsapp:{$phone}";
+            } else {
+                // SMS
+                $options = [
+                    'from' => $this->smsFrom,
+                    'body' => $content,
+                ];
+
+                $to = $phone;
+            }
+
+            // Add status callback
+            if (config('services.twilio.status_callback_url')) {
+                $options['statusCallback'] = config('services.twilio.status_callback_url');
+            }
+
+            // Send via Twilio
+            $twilioMessage = $client->messages->create($to, $options);
+
+            $message->markSent($twilioMessage->sid);
+
+            // Update conversation last message time
+            $conversation->update(['last_message_at' => now()]);
+
+            Log::info('Reply sent successfully', [
+                'conversation_id' => $conversation->id,
+                'phone' => $phone,
+                'channel' => $conversation->channel,
+                'message_id' => $message->id,
+                'twilio_sid' => $twilioMessage->sid,
+            ]);
+
+            return $message;
+
+        } catch (TwilioException $e) {
+            $message->markFailed($e->getMessage());
+
+            Log::error('Failed to send reply', [
+                'conversation_id' => $conversation->id,
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 }

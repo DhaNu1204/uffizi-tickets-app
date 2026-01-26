@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\IncomingMessageService;
 use App\Services\TwilioService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -10,10 +11,12 @@ use Illuminate\Support\Facades\Log;
 class TwilioWebhookController extends Controller
 {
     protected TwilioService $twilioService;
+    protected IncomingMessageService $incomingService;
 
-    public function __construct(TwilioService $twilioService)
+    public function __construct(TwilioService $twilioService, IncomingMessageService $incomingService)
     {
         $this->twilioService = $twilioService;
+        $this->incomingService = $incomingService;
     }
 
     /**
@@ -46,6 +49,50 @@ class TwilioWebhookController extends Controller
 
             // Return 200 to prevent Twilio retries
             return response('OK', 200);
+        }
+    }
+
+    /**
+     * Handle incoming WhatsApp/SMS message
+     * POST /api/webhooks/twilio/incoming
+     */
+    public function incoming(Request $request): Response
+    {
+        // Log the incoming webhook
+        Log::info('Twilio incoming webhook received', [
+            'from' => $request->input('From'),
+            'to' => $request->input('To'),
+            'body' => substr($request->input('Body', ''), 0, 100), // Log first 100 chars
+        ]);
+
+        // Validate request is from Twilio
+        if (!$this->validateTwilioRequest($request)) {
+            Log::warning('Invalid Twilio incoming webhook signature');
+            return response('Unauthorized', 401);
+        }
+
+        try {
+            // Process the incoming message
+            $message = $this->incomingService->handleIncoming($request->all());
+
+            Log::info('Incoming message processed', [
+                'message_id' => $message->id,
+                'conversation_id' => $message->conversation_id,
+            ]);
+
+            // Return empty TwiML response (acknowledge receipt)
+            return response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', 200)
+                ->header('Content-Type', 'text/xml');
+
+        } catch (\Exception $e) {
+            Log::error('Failed to process incoming message', [
+                'error' => $e->getMessage(),
+                'data' => $request->all(),
+            ]);
+
+            // Return 200 to prevent Twilio retries
+            return response('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', 200)
+                ->header('Content-Type', 'text/xml');
         }
     }
 

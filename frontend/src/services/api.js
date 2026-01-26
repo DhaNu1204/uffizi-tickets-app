@@ -146,4 +146,28 @@ export const templatesAPI = {
   duplicate: (id, data = {}) => api.post(`/admin/templates/${id}/duplicate`, data),
 };
 
+// Conversations endpoints (WhatsApp/SMS inbox)
+export const conversationsAPI = {
+  // List conversations with optional filters
+  list: (params = {}) => api.get('/conversations', { params }),
+
+  // Get single conversation with all messages
+  get: (id) => api.get(`/conversations/${id}`),
+
+  // Send reply to a conversation
+  reply: (id, message) => api.post(`/conversations/${id}/reply`, { message }),
+
+  // Mark conversation as read
+  markRead: (id) => api.put(`/conversations/${id}/read`),
+
+  // Link conversation to a booking
+  linkBooking: (id, bookingId) => api.put(`/conversations/${id}/booking`, { booking_id: bookingId }),
+
+  // Archive conversation
+  archive: (id) => api.delete(`/conversations/${id}`),
+
+  // Get unread count for badge
+  unreadCount: () => api.get('/conversations/unread-count'),
+};
+
 export default api;

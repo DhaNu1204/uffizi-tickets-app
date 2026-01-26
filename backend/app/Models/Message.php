@@ -13,9 +13,12 @@ class Message extends Model
 
     protected $fillable = [
         'booking_id',
+        'conversation_id',
         'channel',
+        'direction',
         'external_id',
         'recipient',
+        'sender_name',
         'content',
         'subject',
         'template_id',
@@ -57,6 +60,12 @@ class Message extends Model
     public const CHANNEL_EMAIL = 'email';
 
     /**
+     * Direction constants
+     */
+    public const DIRECTION_OUTBOUND = 'outbound';
+    public const DIRECTION_INBOUND = 'inbound';
+
+    /**
      * Maximum retry attempts
      */
     public const MAX_RETRIES = 3;
@@ -67,6 +76,14 @@ class Message extends Model
     public function booking(): BelongsTo
     {
         return $this->belongsTo(Booking::class);
+    }
+
+    /**
+     * Get the conversation for this message
+     */
+    public function conversation(): BelongsTo
+    {
+        return $this->belongsTo(Conversation::class);
     }
 
     /**
@@ -180,5 +197,37 @@ class Message extends Model
     public function scopeByChannel($query, string $channel)
     {
         return $query->where('channel', $channel);
+    }
+
+    /**
+     * Scope for outbound messages
+     */
+    public function scopeOutbound($query)
+    {
+        return $query->where('direction', self::DIRECTION_OUTBOUND);
+    }
+
+    /**
+     * Scope for inbound messages
+     */
+    public function scopeInbound($query)
+    {
+        return $query->where('direction', self::DIRECTION_INBOUND);
+    }
+
+    /**
+     * Check if this is an inbound message
+     */
+    public function isInbound(): bool
+    {
+        return $this->direction === self::DIRECTION_INBOUND;
+    }
+
+    /**
+     * Check if this is an outbound message
+     */
+    public function isOutbound(): bool
+    {
+        return $this->direction === self::DIRECTION_OUTBOUND;
     }
 }

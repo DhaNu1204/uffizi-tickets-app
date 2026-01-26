@@ -11,6 +11,7 @@ use App\Http\Controllers\ManualMessageController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\TemplateAdminController;
 use App\Http\Controllers\TwilioWebhookController;
+use App\Http\Controllers\ConversationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,6 +28,9 @@ Route::post('/webhook/bokun', [BookingController::class, 'handleWebhook']);
 
 // Twilio status callback - verified via Twilio signature
 Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status']);
+
+// Twilio incoming message webhook - verified via Twilio signature
+Route::post('/webhooks/twilio/incoming', [TwilioWebhookController::class, 'incoming']);
 
 // Authentication routes - rate limited to prevent brute force
 Route::middleware('throttle:5,1')->group(function () {
@@ -110,6 +114,15 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::post('/templates/{id}/preview', [TemplateAdminController::class, 'preview']);
         Route::post('/templates/{id}/duplicate', [TemplateAdminController::class, 'duplicate']);
     });
+
+    // Conversation Routes (WhatsApp/SMS inbox)
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/unread-count', [ConversationController::class, 'unreadCount']);
+    Route::get('/conversations/{id}', [ConversationController::class, 'show']);
+    Route::post('/conversations/{id}/reply', [ConversationController::class, 'reply']);
+    Route::put('/conversations/{id}/read', [ConversationController::class, 'markRead']);
+    Route::put('/conversations/{id}/booking', [ConversationController::class, 'linkBooking']);
+    Route::delete('/conversations/{id}', [ConversationController::class, 'archive']);
 });
 
 /*
