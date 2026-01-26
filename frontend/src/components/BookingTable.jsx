@@ -342,11 +342,19 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
         </td>
         <td>
           <div className="actions-cell">
+            {/* Wizard abandoned indicator */}
+            {booking.wizard_status?.status === 'abandoned' && isTimedEntry(booking.bokun_product_id) && (
+              <span className="wizard-abandoned-badge" title="Wizard was closed without completing">
+                {booking.wizard_status.label}
+              </span>
+            )}
             <button
-              className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
+              className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'} ${booking.wizard_status?.status === 'abandoned' ? 'resume' : ''}`}
               onClick={() => handleTicketAction(booking)}
             >
-              {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
+              {booking.wizard_status?.status === 'abandoned'
+                ? 'Resume'
+                : booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
             </button>
             {booking.status === 'TICKET_PURCHASED' && (
               <button
@@ -733,11 +741,19 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                     </td>
                     <td>
                       <div className="actions-cell">
+                        {/* Wizard abandoned indicator */}
+                        {booking.wizard_status?.status === 'abandoned' && isTimedEntry(booking.bokun_product_id) && (
+                          <span className="wizard-abandoned-badge" title="Wizard was closed without completing">
+                            {booking.wizard_status.label}
+                          </span>
+                        )}
                         <button
-                          className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
+                          className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'} ${booking.wizard_status?.status === 'abandoned' ? 'resume' : ''}`}
                           onClick={() => handleTicketAction(booking)}
                         >
-                          {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
+                          {booking.wizard_status?.status === 'abandoned'
+                            ? 'Resume'
+                            : booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
                         </button>
                         {booking.status === 'TICKET_PURCHASED' && (
                           <button

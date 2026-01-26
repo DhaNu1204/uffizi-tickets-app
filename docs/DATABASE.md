@@ -41,6 +41,9 @@ Main table storing tour bookings synced from Bokun API.
 | audio_guide_username | varchar | POP Guide username |
 | audio_guide_password | varchar | POP Guide password |
 | audio_guide_url | varchar | POP Guide access URL |
+| wizard_started_at | timestamp | When ticket wizard was opened |
+| wizard_last_step | tinyint | Last wizard step reached (1-6) |
+| wizard_abandoned_at | timestamp | When wizard was closed without completing |
 | created_at | timestamp | Record creation time |
 | updated_at | timestamp | Last update time |
 | deleted_at | timestamp | Soft delete (for cancelled bookings) |
@@ -50,6 +53,12 @@ Main table storing tour bookings synced from Bokun API.
 - `tour_date`
 - `status`
 - `bokun_product_id`
+
+**Wizard Status Logic**:
+- `tickets_sent_at` set = completed
+- `wizard_abandoned_at` set = abandoned (needs attention)
+- `wizard_started_at` set, no abandon = in progress
+- Nothing set = not started
 
 ---
 
@@ -224,6 +233,7 @@ Migration files are located at `backend/database/migrations/`:
 | `2026_01_25_100002_create_messages_table.php` | Sent messages |
 | `2026_01_25_100003_create_message_attachments_table.php` | PDF attachments |
 | `2026_01_25_200001_add_template_type_to_message_templates.php` | Template types |
+| `2026_01_26_100000_add_wizard_progress_to_bookings_table.php` | Wizard progress tracking |
 | `2026_01_26_130000_make_booking_id_nullable_in_messages_table.php` | Allow manual sends |
 | `2026_01_27_000001_create_conversations_table.php` | Conversation threads |
 | `2026_01_27_000002_add_conversation_fields_to_messages.php` | Add direction, conversation_id to messages |

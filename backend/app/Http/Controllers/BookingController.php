@@ -189,6 +189,59 @@ class BookingController extends Controller
     }
 
     /**
+     * Update wizard progress for a booking.
+     * Called when user navigates through the ticket sending wizard.
+     */
+    public function updateWizardProgress(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'step' => 'required|integer|min:1|max:6',
+            'action' => 'required|in:start,progress,abandon,complete',
+        ]);
+
+        $booking = Booking::findOrFail($id);
+
+        switch ($validated['action']) {
+            case 'start':
+                // Starting wizard - clear any previous abandonment
+                $booking->wizard_started_at = Carbon::now();
+                $booking->wizard_last_step = $validated['step'];
+                $booking->wizard_abandoned_at = null;
+                break;
+
+            case 'progress':
+                // Moving to a new step
+                if (!$booking->wizard_started_at) {
+                    $booking->wizard_started_at = Carbon::now();
+                }
+                $booking->wizard_last_step = $validated['step'];
+                $booking->wizard_abandoned_at = null;
+                break;
+
+            case 'abandon':
+                // User closed wizard without completing
+                $booking->wizard_abandoned_at = Carbon::now();
+                break;
+
+            case 'complete':
+                // Wizard completed successfully
+                $booking->wizard_abandoned_at = null;
+                // tickets_sent_at will be set by the send-ticket endpoint
+                break;
+        }
+
+        $booking->save();
+
+        // Clear stats cache since pending counts may have changed
+        $this->clearStatsCache();
+
+        return response()->json([
+            'success' => true,
+            'wizard_status' => $booking->wizard_status,
+        ]);
+    }
+
+    /**
      * Soft delete a booking.
      */
     public function destroy($id)
@@ -286,7 +339,10 @@ class BookingController extends Controller
                 'is_tomorrow' => $carbonDate->isTomorrow(),
                 'total_bookings' => $dayBookings->count(),
                 'total_pax' => $dayBookings->sum('pax'),
-                'pending_count' => $dayBookings->where('status', 'PENDING_TICKET')->count(),
+                'pending_count' => $dayBookings->filter(function ($booking) {
+                    // Count as pending if: no ticket purchased OR wizard was abandoned
+                    return $booking->status === 'PENDING_TICKET' || $booking->wizard_abandoned_at !== null;
+                })->count(),
                 'bookings' => $dayBookings->sortBy('tour_date')->values(),
             ];
         }
@@ -320,18 +376,29 @@ class BookingController extends Controller
                 ->whereDate('tour_date', '<=', $dateTo)
                 ->count();
 
-            // By status
-            $pendingTickets = Booking::where('status', 'PENDING_TICKET')->count();
-            $purchasedTickets = Booking::where('status', 'TICKET_PURCHASED')->count();
+            // By status - count abandoned wizards as "pending" (not complete)
+            $pendingTickets = Booking::where(function ($q) {
+                $q->where('status', 'PENDING_TICKET')
+                  ->orWhereNotNull('wizard_abandoned_at');
+            })->count();
+            $purchasedTickets = Booking::where('status', 'TICKET_PURCHASED')
+                ->whereNull('wizard_abandoned_at')
+                ->count();
 
-            // Pending in date range (urgent)
-            $pendingInRange = Booking::where('status', 'PENDING_TICKET')
+            // Pending in date range (urgent) - includes abandoned wizards
+            $pendingInRange = Booking::where(function ($q) {
+                $q->where('status', 'PENDING_TICKET')
+                  ->orWhereNotNull('wizard_abandoned_at');
+            })
                 ->whereDate('tour_date', '>=', $dateFrom)
                 ->whereDate('tour_date', '<=', $dateTo)
                 ->count();
 
-            // Upcoming bookings (next 7 days) needing tickets
-            $upcomingPending = Booking::where('status', 'PENDING_TICKET')
+            // Upcoming bookings (next 7 days) needing tickets - includes abandoned wizards
+            $upcomingPending = Booking::where(function ($q) {
+                $q->where('status', 'PENDING_TICKET')
+                  ->orWhereNotNull('wizard_abandoned_at');
+            })
                 ->whereDate('tour_date', '>=', Carbon::now())
                 ->whereDate('tour_date', '<=', Carbon::now()->addDays(7))
                 ->count();

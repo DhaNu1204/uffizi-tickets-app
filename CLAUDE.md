@@ -77,6 +77,7 @@ See `docs/DATABASE.md` for detailed schema.
 | POST | /api/login | Authentication |
 | GET | /api/bookings/grouped | Bookings by date |
 | PUT | /api/bookings/{id} | Update booking |
+| POST | /api/bookings/{id}/wizard-progress | Track wizard progress |
 | POST | /api/bookings/sync | Full Bokun sync |
 | POST | /api/bookings/auto-sync | Auto-sync |
 
@@ -229,6 +230,20 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 | 5 | Preview message, confirm channel |
 | 6 | Send and track delivery |
 
+### Wizard Progress Tracking
+The wizard tracks user progress in the database:
+- `wizard_started_at` - When wizard was opened
+- `wizard_last_step` - Last step reached (1-6)
+- `wizard_abandoned_at` - When wizard was closed without completing
+
+**Status indicators**:
+- Not started: No indicator
+- In progress: "Step X/6" badge
+- Abandoned: "Step X/6" badge (orange) - counts as pending
+- Completed: "Sent" badge (green)
+
+Abandoned wizards are counted in pending stats to highlight incomplete work.
+
 ### Supported Languages
 en, it, es, de, fr, ja, el, tr, ko, pt (auto-detected from phone country code)
 
@@ -315,8 +330,9 @@ ssh -p 65002 u803853690@82.25.82.111 "cd /home/.../uffizi/backend && /opt/alt/ph
 | `CLAUDE.local.md.example` | Local dev settings template |
 
 ## Recent Changes (Jan 2026)
+- **Wizard progress tracking** - Track abandoned/incomplete wizard sessions
 - **Conversations page** - View and reply to customer WhatsApp/SMS messages
-- Ticket Sending Wizard (6 steps)
+- Ticket Sending Wizard (6 steps) with progress persistence
 - Multi-channel messaging (WhatsApp, SMS, Email)
 - **Manual Send feature** - Send to any phone/email without booking
 - 10-language templates with auto-detection

@@ -58,6 +58,19 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     6: true, // Send step
   });
 
+  // Track wizard progress in database
+  useEffect(() => {
+    // Mark wizard as started when component mounts
+    bookingsAPI.updateWizardProgress(booking.id, 1, 'start').catch(console.error);
+  }, [booking.id]);
+
+  // Track step changes
+  useEffect(() => {
+    if (currentStep > 1) {
+      bookingsAPI.updateWizardProgress(booking.id, currentStep, 'progress').catch(console.error);
+    }
+  }, [currentStep, booking.id]);
+
   // Validate step 2: Reference number format (and audio guide if applicable)
   useEffect(() => {
     const referenceValidation = validateReferenceCode(wizardData.referenceNumber);
@@ -203,9 +216,13 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
   };
 
   const handleClose = () => {
-    // If ticket was sent successfully, call onComplete
+    // If ticket was sent successfully, mark as complete and call onComplete
     if (wizardData.sendResult?.success) {
+      bookingsAPI.updateWizardProgress(booking.id, 6, 'complete').catch(console.error);
       onComplete?.(wizardData.sendResult);
+    } else {
+      // Mark as abandoned if closed without completing
+      bookingsAPI.updateWizardProgress(booking.id, currentStep, 'abandon').catch(console.error);
     }
     onClose();
   };
