@@ -185,6 +185,48 @@ Location: `backend/resources/views/emails/`
 |----------|---------|
 | `ticket.blade.php` | Ticket delivery email |
 | `ticket-with-audio.blade.php` | Ticket + audio guide instructions |
+| `manual.blade.php` | Manual send email (simple text) |
+
+---
+
+## Manual Message Service
+
+**Service File**: `backend/app/Services/ManualMessageService.php`
+
+This service handles sending messages without a booking association.
+
+### Methods
+
+| Method | Purpose |
+|--------|---------|
+| `sendWhatsApp($phone, $message, $attachment)` | Send WhatsApp with optional PDF |
+| `sendSms($phone, $message)` | Send SMS message |
+| `sendEmail($email, $subject, $message, $attachment)` | Send email with optional PDF |
+
+### Controller
+
+**File**: `backend/app/Http/Controllers/ManualMessageController.php`
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| `send()` | POST /api/messages/send-manual | Send manual message |
+| `history()` | GET /api/messages/manual-history | Get manual message history |
+
+### Validation Rules
+
+| Field | Rules |
+|-------|-------|
+| `channel` | required, in:whatsapp,sms,email |
+| `recipient` | required, phone (11-15 digits) or email |
+| `message` | required, min:10 |
+| `subject` | required if channel=email |
+| `attachment` | optional, PDF, max 10MB |
+
+### Phone Number Validation
+
+- Must have 11-15 digits (E.164 format)
+- Examples: +39 333 123 4567 (Italy), +32 472 12 34 56 (Belgium)
+- Cleaned and validated before sending
 
 ---
 
@@ -287,4 +329,17 @@ php artisan tinker
 # Send test email (via tinker)
 php artisan tinker
 >>> Mail::raw('Test email', fn($m) => $m->to('test@example.com')->subject('Test'));
+```
+
+### Manual Message
+```bash
+# Send test via API (requires auth token)
+curl -X POST http://localhost:8000/api/messages/send-manual \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"channel":"whatsapp","recipient":"+393331234567","message":"Test message from manual send"}'
+
+# Get manual message history
+curl http://localhost:8000/api/messages/manual-history \
+  -H "Authorization: Bearer YOUR_TOKEN"
 ```

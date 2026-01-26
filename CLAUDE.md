@@ -16,13 +16,13 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 ```
 /Uffizi-Ticket-App
 ├── backend/                    # Laravel API
-│   ├── app/Http/Controllers/   # BookingController, MessageController, etc.
+│   ├── app/Http/Controllers/   # BookingController, MessageController, ManualMessageController
 │   ├── app/Models/             # Booking, Message, MessageTemplate, etc.
-│   ├── app/Services/           # BokunService, MessagingService, TwilioService
+│   ├── app/Services/           # BokunService, MessagingService, ManualMessageService
 │   ├── routes/api.php          # API routes
 │   └── database/migrations/    # DB schema
 ├── frontend/                   # React SPA
-│   ├── src/components/         # BookingTable, TicketWizard/
+│   ├── src/components/         # BookingTable, TicketWizard/, ManualSendModal
 │   ├── src/pages/              # Dashboard, TemplateAdmin
 │   └── src/services/api.js     # API client
 ├── docs/                       # Extended documentation
@@ -39,6 +39,7 @@ A ticket management dashboard for Uffizi Gallery tours. Syncs bookings from Boku
 - Ticket tracking (PENDING_TICKET / TICKET_PURCHASED)
 - 6-step Ticket Sending Wizard (Timed Entry only)
 - Multi-channel messaging (WhatsApp, SMS, Email) with auto-detection
+- **Manual Send** - Send messages to any phone/email without a booking
 - 10-language templates with phone-based auto-detection
 - Audio guide tracking and PDF attachments
 - Daily pagination with calendar picker
@@ -84,6 +85,8 @@ See `docs/DATABASE.md` for detailed schema.
 | GET | /api/bookings/{id}/detect-channel | Check WhatsApp |
 | POST | /api/messages/preview | Preview message |
 | GET | /api/templates/languages | Supported languages |
+| POST | /api/messages/send-manual | Send manual message (no booking) |
+| GET | /api/messages/manual-history | Get manual message history |
 
 ### Attachments & Templates
 | Method | Endpoint | Purpose |
@@ -145,6 +148,7 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 - **Sync bookings**: Click "Sync Bokun" button (auto-syncs on load)
 - **Add ticket**: Click "Add Ticket" > Enter Uffizi code
 - **Send ticket (wizard)**: Click "Send Ticket" > 6-step wizard
+- **Manual send**: Username dropdown > "Manual Send" (any phone/email)
 - **Mark audio sent**: Click "Audio Sent" for audio guide bookings
 - **Copy reference**: Click reference number to copy
 - **Manage templates**: Username dropdown > "Message Templates"
@@ -167,6 +171,20 @@ cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
 1. Look for purple "Audio Guide" badge
 2. Send audio guide access link to client
 3. Click "Audio Sent" to track
+
+### Manual Send (Test/Custom Messages)
+1. Click username dropdown > "Manual Send"
+2. Select channel: WhatsApp, SMS, or Email
+3. Enter recipient (phone with country code or email)
+4. Enter message content
+5. Optionally attach PDF (WhatsApp/Email only)
+6. Click "Send Message"
+7. Check History tab for delivery status
+
+**Notes**:
+- Phone numbers require 11-15 digits (e.g., +39 333 123 4567)
+- Messages logged in database with `booking_id = null`
+- Rate limited to 10 messages per minute
 
 ## Ticket Sending Wizard
 
@@ -247,7 +265,8 @@ ssh -p 65002 u803853690@82.25.82.111 "cd /home/.../uffizi/backend && /opt/alt/ph
 ## Rate Limiting
 - Login: 5/min
 - API: 60/min
-- Sync: 2/min
+- Sync: 10/min
+- Manual Send: 10/min
 
 ## Git Tags
 | Tag | Description |
@@ -268,6 +287,7 @@ ssh -p 65002 u803853690@82.25.82.111 "cd /home/.../uffizi/backend && /opt/alt/ph
 ## Recent Changes (Jan 2026)
 - Ticket Sending Wizard (6 steps)
 - Multi-channel messaging (WhatsApp, SMS, Email)
+- **Manual Send feature** - Send to any phone/email without booking
 - 10-language templates with auto-detection
 - Template Admin at /admin/templates
 - PDF attachments via S3

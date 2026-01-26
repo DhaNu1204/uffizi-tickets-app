@@ -54,12 +54,12 @@ Main table storing tour bookings synced from Bokun API.
 
 ### messages
 
-Records of all sent messages for ticket delivery.
+Records of all sent messages for ticket delivery and manual sends.
 
 | Column | Type | Description |
 |--------|------|-------------|
 | id | bigint | Primary key |
-| booking_id | bigint | Foreign key to bookings |
+| booking_id | bigint | Foreign key to bookings (nullable for manual sends) |
 | channel | varchar | whatsapp, sms, or email |
 | external_id | varchar | Twilio SID or mail ID |
 | recipient | varchar | Phone number or email address |
@@ -79,10 +79,14 @@ Records of all sent messages for ticket delivery.
 | updated_at | timestamp | Last update time |
 
 **Indexes**:
-- `booking_id` (foreign key)
+- `booking_id` (foreign key, nullable - allows null for manual messages)
 - `channel`
 - `status`
 - `external_id`
+
+**Manual Messages**:
+Messages with `booking_id = null` are manual sends created via the Manual Send feature.
+Query manual messages: `SELECT * FROM messages WHERE booking_id IS NULL`
 
 ---
 
@@ -182,6 +186,7 @@ Migration files are located at `backend/database/migrations/`:
 | `2026_01_25_100002_create_messages_table.php` | Sent messages |
 | `2026_01_25_100003_create_message_attachments_table.php` | PDF attachments |
 | `2026_01_25_200001_add_template_type_to_message_templates.php` | Template types |
+| `2026_01_26_130000_make_booking_id_nullable_in_messages_table.php` | Allow manual sends |
 
 ---
 
