@@ -20,6 +20,33 @@
   font-size: 0.9rem;
 }
 
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  color: #374151;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-button:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #111827;
+}
+
+.back-button svg {
+  width: 18px;
+  height: 18px;
+}
+
 .error-banner {
   background: #fef2f2;
   border: 1px solid #fee2e2;

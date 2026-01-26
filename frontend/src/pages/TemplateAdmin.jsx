@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { templatesAPI } from '../services/api';
 import './TemplateAdmin.css';
 
 export default function TemplateAdmin() {
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState([]);
   const [languages, setLanguages] = useState({});
   const [channels, setChannels] = useState([]);
@@ -121,6 +123,12 @@ export default function TemplateAdmin() {
   return (
     <div className="template-admin">
       <header className="admin-header">
+        <button className="back-button" onClick={() => navigate('/')}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5M12 19l-7-7 7-7" />
+          </svg>
+          Back to Dashboard
+        </button>
         <h1>Message Templates</h1>
         <p>Manage message templates for different languages and channels</p>
       </header>

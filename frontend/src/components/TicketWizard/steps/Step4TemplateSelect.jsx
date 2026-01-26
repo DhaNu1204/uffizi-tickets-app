@@ -191,7 +191,10 @@ export default function Step4TemplateSelect({ booking, language, onChange, detec
     return (
       <div className="wizard-step-content step-template-select">
         <h3>Select Message Language</h3>
-        <div className="loading-spinner">Loading languages...</div>
+        <div className="loading-container">
+          <div className="spinner-icon"></div>
+          <span>Loading languages...</span>
+        </div>
       </div>
     );
   }
