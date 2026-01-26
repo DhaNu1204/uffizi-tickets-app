@@ -1,0 +1,117 @@
+# Local Development Configuration - Uffizi Ticket App
+
+This file contains machine-specific settings. Copy to `CLAUDE.local.md` and fill in your values.
+**DO NOT commit CLAUDE.local.md to version control.**
+
+## Local Database
+
+```
+Host: 127.0.0.1
+Port: 3306
+Database: uffizi_tickets
+Username: root
+Password: YOUR_LOCAL_PASSWORD_HERE
+```
+
+### MySQL Commands (Windows)
+
+```bash
+# Connect to local MySQL
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -pYOUR_PASSWORD uffizi_tickets
+
+# Quick queries
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -pYOUR_PASSWORD uffizi_tickets -e "SELECT COUNT(*) FROM bookings;"
+```
+
+## Production SSH Access
+
+```
+Host: 82.25.82.111
+Port: 65002
+Username: u803853690
+SSH Command: ssh -p 65002 u803853690@82.25.82.111
+```
+
+### Production Paths
+
+```
+Backend: /home/u803853690/domains/deetech.cc/public_html/uffizi/backend
+Frontend: /home/u803853690/domains/deetech.cc/public_html/uffizi/
+PHP Path: /opt/alt/php82/usr/bin/php
+```
+
+### Production Database
+
+```
+Host: localhost
+Database: u803853690_uffizi_tickets
+Username: u803853690_uffizi
+Password: PRODUCTION_PASSWORD_HERE
+```
+
+## Local File Paths
+
+```
+Project Root: D:/Uffizi-Ticket-App
+Backend: D:/Uffizi-Ticket-App/backend
+Frontend: D:/Uffizi-Ticket-App/frontend
+MySQL Bin: C:/Program Files/MySQL/MySQL Server 8.0/bin/
+```
+
+## Backup File Locations
+
+```
+Raw SQL Backup: D:/Uffizi-Ticket-App/uffizi_backup.sql
+Clean SQL Backup: D:/Uffizi-Ticket-App/uffizi_backup_clean.sql
+JSON Backup: D:/Uffizi-Ticket-App/all_bookings_backup.json
+```
+
+## Clone Database from Production
+
+```bash
+# 1. Export from production
+ssh -p 65002 u803853690@82.25.82.111 "cd /home/u803853690/domains/deetech.cc/public_html/uffizi/backend && mysqldump -u u803853690_uffizi -pPROD_PASSWORD u803853690_uffizi_tickets > backup.sql"
+
+# 2. Download
+scp -P 65002 u803853690@82.25.82.111:/home/u803853690/domains/deetech.cc/public_html/uffizi/backend/backup.sql ./
+
+# 3. Clean and import
+tail -n +3 backup.sql > backup_clean.sql
+"C:/Program Files/MySQL/MySQL Server 8.0/bin/mysql.exe" -u root -pYOUR_PASSWORD uffizi_tickets < backup_clean.sql
+```
+
+## Environment Files
+
+### Backend (.env)
+```env
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=uffizi_tickets
+DB_USERNAME=root
+DB_PASSWORD="YOUR_LOCAL_PASSWORD"
+```
+
+### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8000/api
+```
+
+## Quick Start Commands
+
+```bash
+# Start backend
+cd D:/Uffizi-Ticket-App/backend
+php artisan serve --host=127.0.0.1 --port=8000
+
+# Start frontend (new terminal)
+cd D:/Uffizi-Ticket-App/frontend
+npm run dev -- --port 5173 --host 127.0.0.1
+```
+
+## Local URLs
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://127.0.0.1:5173 |
+| Backend API | http://127.0.0.1:8000/api |

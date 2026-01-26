@@ -1,0 +1,1619 @@
+openapi: 3.0.3
+info:
+  title: Uffizi Ticket App API
+  description: |
+    API for managing Uffizi Gallery tour bookings.
+
+    This API syncs bookings from Bokun, tracks Uffizi ticket purchases,
+    and manages multi-channel messaging (WhatsApp, SMS, Email) for sending
+    tickets to customers.
+
+    ## Authentication
+    All endpoints except `/health`, `/health/detailed`, `/login`, and webhooks
+    require Bearer token authentication via Laravel Sanctum.
+
+    Obtain a token via `POST /api/login` and include it in subsequent requests:
+    ```
+    Authorization: Bearer {token}
+    ```
+
+    ## Rate Limiting
+    - Login: 5 requests per minute
+    - General API: 60 requests per minute
+    - Sync/Import: 10 requests per minute
+
+    ## Timezone
+    All dates are in UTC. The frontend uses Europe/Rome for display.
+  version: 2.0.0
+  contact:
+    name: API Support
+    email: support@florencewithlocals.com
+  license:
+    name: Proprietary
+    url: https://uffizi.deetech.cc
+
+servers:
+  - url: https://uffizi.deetech.cc/api
+    description: Production server
+  - url: http://localhost:8000/api
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User authentication endpoints
+  - name: Bookings
+    description: Booking CRUD and sync operations
+  - name: Messages
+    description: Ticket sending and messaging
+  - name: Attachments
+    description: PDF file attachments
+  - name: Templates
+    description: Message template management
+  - name: Webhooks
+    description: Webhook management and Bokun integration
+  - name: Health
+    description: Health check endpoints
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Returns basic health status. Does not require authentication.
+      operationId: healthCheck
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: ok
+                database: connected
+                timestamp: "2026-01-26T10:30:00+00:00"
+                version: "2.0.0"
+
+  /health/detailed:
+    get:
+      tags:
+        - Health
+      summary: Detailed health check
+      description: Returns detailed health status with all checks. Does not require authentication.
+      operationId: healthCheckDetailed
+      security: []
+      responses:
+        '200':
+          description: Detailed health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DetailedHealthResponse'
+
+  /login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: |
+        Authenticate user and receive a Bearer token for subsequent API calls.
+        Rate limited to 5 requests per minute.
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "user@example.com"
+              password: "secret123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '422':
+          description: Validation error or invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+        '429':
+          description: Too many login attempts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Invalidate the current authentication token.
+      operationId: logout
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /user:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user
+      description: Returns the authenticated user's information.
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user info
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /bookings:
+    get:
+      tags:
+        - Bookings
+      summary: List bookings
+      description: Get a paginated list of bookings with optional filters.
+      operationId: listBookings
+      parameters:
+        - name: status
+          in: query
+          description: Filter by booking status
+          schema:
+            type: string
+            enum: [PENDING_TICKET, TICKET_PURCHASED]
+        - name: product_id
+          in: query
+          description: Filter by Bokun product ID
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          description: Filter by tour date (start)
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          description: Filter by tour date (end)
+          schema:
+            type: string
+            format: date
+        - name: search
+          in: query
+          description: Search by customer name or booking ID
+          schema:
+            type: string
+        - name: per_page
+          in: query
+          description: Results per page (default 20, max 100)
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            default: 1
+        - name: sort_by
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [tour_date, customer_name, created_at]
+        - name: sort_dir
+          in: query
+          description: Sort direction
+          schema:
+            type: string
+            enum: [asc, desc]
+      responses:
+        '200':
+          description: Paginated list of bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookings'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+    post:
+      tags:
+        - Bookings
+      summary: Create a booking
+      description: Manually create a new booking.
+      operationId: createBooking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBookingRequest'
+      responses:
+        '201':
+          description: Booking created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /bookings/grouped:
+    get:
+      tags:
+        - Bookings
+      summary: Get bookings grouped by date
+      description: |
+        Returns bookings grouped by date with time slot grouping.
+        Used for the main dashboard view.
+      operationId: getGroupedBookings
+      parameters:
+        - name: date
+          in: query
+          description: Specific date to fetch (defaults to today)
+          schema:
+            type: string
+            format: date
+        - name: product_id
+          in: query
+          description: Filter by Bokun product ID
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Grouped bookings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GroupedBookingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /bookings/stats:
+    get:
+      tags:
+        - Bookings
+      summary: Get booking statistics
+      description: Returns summary statistics for bookings.
+      operationId: getBookingStats
+      responses:
+        '200':
+          description: Booking statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BookingStats'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /bookings/sync:
+    post:
+      tags:
+        - Bookings
+      summary: Sync bookings from Bokun
+      description: |
+        Trigger a full sync of bookings from the Bokun API.
+        Rate limited to 10 requests per minute.
+      operationId: syncBookings
+      responses:
+        '200':
+          description: Sync completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  synced_count:
+                    type: integer
+                  new_count:
+                    type: integer
+                  updated_count:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /bookings/auto-sync:
+    post:
+      tags:
+        - Bookings
+      summary: Auto-sync bookings
+      description: |
+        Lightweight auto-sync that runs on dashboard load.
+        Fetches participant names for pending bookings.
+      operationId: autoSyncBookings
+      responses:
+        '200':
+          description: Auto-sync completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  participants_updated:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /bookings/{id}:
+    get:
+      tags:
+        - Bookings
+      summary: Get a single booking
+      description: Returns detailed information about a specific booking.
+      operationId: getBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Bookings
+      summary: Update a booking
+      description: Update booking details like reference number, status, or notes.
+      operationId: updateBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateBookingRequest'
+      responses:
+        '200':
+          description: Booking updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    delete:
+      tags:
+        - Bookings
+      summary: Delete a booking
+      description: Soft-delete a booking.
+      operationId: deleteBooking
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: Booking deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Booking deleted successfully"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{id}/send-ticket:
+    post:
+      tags:
+        - Messages
+      summary: Send ticket to customer
+      description: |
+        Send ticket via the detected channel (WhatsApp, SMS, or Email).
+        Requires ticket reference and attached PDF.
+      operationId: sendTicket
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendTicketRequest'
+      responses:
+        '200':
+          description: Ticket sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendTicketResponse'
+        '400':
+          description: Cannot send ticket (missing requirements)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{id}/detect-channel:
+    get:
+      tags:
+        - Messages
+      summary: Detect messaging channel
+      description: Check which messaging channel is available for this booking.
+      operationId: detectChannel
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: Channel detection result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChannelDetectionResponse'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{id}/messages:
+    get:
+      tags:
+        - Messages
+      summary: Get message history
+      description: Get all messages sent for this booking.
+      operationId: getMessageHistory
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: Message history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /bookings/{id}/attachments:
+    get:
+      tags:
+        - Attachments
+      summary: List attachments
+      description: Get all PDF attachments for a booking.
+      operationId: listAttachments
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      responses:
+        '200':
+          description: List of attachments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Attachment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - Attachments
+      summary: Upload attachment
+      description: Upload a PDF file attachment for a booking.
+      operationId: uploadAttachment
+      parameters:
+        - $ref: '#/components/parameters/BookingId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file (max 10MB)
+      responses:
+        '201':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Invalid file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /attachments/{id}:
+    delete:
+      tags:
+        - Attachments
+      summary: Delete attachment
+      description: Remove an uploaded attachment.
+      operationId: deleteAttachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Attachment ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Attachment deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /messages/preview:
+    post:
+      tags:
+        - Messages
+      summary: Preview message
+      description: Preview a message with template variables rendered.
+      operationId: previewMessage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - booking_id
+                - template_id
+              properties:
+                booking_id:
+                  type: integer
+                template_id:
+                  type: integer
+      responses:
+        '200':
+          description: Message preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subject:
+                    type: string
+                  content:
+                    type: string
+                  recipient:
+                    type: string
+                  channel:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /messages/templates:
+    get:
+      tags:
+        - Templates
+      summary: List templates
+      description: Get available message templates filtered by channel and language.
+      operationId: listTemplates
+      parameters:
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [email, whatsapp, sms]
+        - name: language
+          in: query
+          schema:
+            type: string
+            example: en
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /templates/languages:
+    get:
+      tags:
+        - Templates
+      summary: Get supported languages
+      description: Get list of supported languages with metadata.
+      operationId: getLanguages
+      responses:
+        '200':
+          description: List of languages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    code:
+                      type: string
+                      example: en
+                    name:
+                      type: string
+                      example: English
+                    flag:
+                      type: string
+                      example: "\U0001F1EC\U0001F1E7"
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /templates/by-language-type:
+    get:
+      tags:
+        - Templates
+      summary: Get template by language and type
+      description: Get a specific template by language code and template type.
+      operationId: getTemplateByLanguageType
+      parameters:
+        - name: language
+          in: query
+          required: true
+          schema:
+            type: string
+            example: en
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [ticket_only, ticket_with_audio]
+        - name: channel
+          in: query
+          schema:
+            type: string
+            enum: [email, whatsapp, sms]
+            default: email
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /admin/templates:
+    get:
+      tags:
+        - Templates
+      summary: List all templates (admin)
+      description: Get all templates with admin filters.
+      operationId: adminListTemplates
+      parameters:
+        - name: channel
+          in: query
+          schema:
+            type: string
+        - name: language
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+    post:
+      tags:
+        - Templates
+      summary: Create template
+      description: Create a new message template.
+      operationId: createTemplate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTemplateRequest'
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /admin/templates/{id}:
+    get:
+      tags:
+        - Templates
+      summary: Get template
+      description: Get a single template by ID.
+      operationId: getTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Template details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Templates
+      summary: Update template
+      description: Update an existing template.
+      operationId: updateTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplateRequest'
+      responses:
+        '200':
+          description: Template updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+    delete:
+      tags:
+        - Templates
+      summary: Delete template
+      description: Delete a template.
+      operationId: deleteTemplate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhook/bokun:
+    post:
+      tags:
+        - Webhooks
+      summary: Bokun webhook receiver
+      description: |
+        Receives booking webhooks from Bokun.
+        Verified via HMAC-SHA256 signature in X-Bokun-HMAC header.
+      operationId: handleBokunWebhook
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Bokun webhook payload
+      responses:
+        '200':
+          description: Webhook processed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    description: Number of bookings created/updated
+                  cancelled:
+                    type: integer
+                    description: Number of bookings cancelled
+
+  /webhooks:
+    get:
+      tags:
+        - Webhooks
+      summary: List webhook logs
+      description: Get paginated list of webhook logs.
+      operationId: listWebhookLogs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processed, failed]
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Webhook logs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/WebhookLog'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /webhooks/stats:
+    get:
+      tags:
+        - Webhooks
+      summary: Get webhook statistics
+      description: Get webhook processing statistics.
+      operationId: getWebhookStats
+      responses:
+        '200':
+          description: Webhook statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  processed:
+                    type: integer
+                  failed:
+                    type: integer
+                  pending:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+
+  /webhooks/{id}/retry:
+    post:
+      tags:
+        - Webhooks
+      summary: Retry webhook
+      description: Retry processing a failed webhook.
+      operationId: retryWebhook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Webhook reprocessed
+        '400':
+          description: Cannot retry (already processed)
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /webhooks/twilio/status:
+    post:
+      tags:
+        - Webhooks
+      summary: Twilio status callback
+      description: |
+        Receives message delivery status updates from Twilio.
+        Verified via Twilio signature.
+      operationId: handleTwilioStatus
+      security: []
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                MessageSid:
+                  type: string
+                MessageStatus:
+                  type: string
+                ErrorCode:
+                  type: string
+                ErrorMessage:
+                  type: string
+      responses:
+        '200':
+          description: Status processed
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Laravel Sanctum Bearer Token
+
+  parameters:
+    BookingId:
+      name: id
+      in: path
+      required: true
+      description: Booking ID
+      schema:
+        type: integer
+
+  responses:
+    Unauthenticated:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Unauthenticated."
+              error:
+                type: string
+                example: "Please login to access this resource."
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: "Resource not found"
+
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: ok
+        database:
+          type: string
+          example: connected
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: "2.0.0"
+
+    DetailedHealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+        checks:
+          type: object
+          properties:
+            database:
+              type: object
+              properties:
+                status:
+                  type: string
+                latency_ms:
+                  type: number
+            storage:
+              type: object
+              properties:
+                status:
+                  type: string
+            cache:
+              type: object
+              properties:
+                status:
+                  type: string
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+        environment:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        token:
+          type: string
+          description: Bearer token for API authentication
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Booking:
+      type: object
+      properties:
+        id:
+          type: integer
+        bokun_booking_id:
+          type: string
+          description: Unique Bokun booking ID
+        bokun_product_id:
+          type: string
+          description: Bokun product ID
+        booking_channel:
+          type: string
+          description: Booking source (GetYourGuide, Viator, direct)
+        product_name:
+          type: string
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+          format: email
+        customer_phone:
+          type: string
+        tour_date:
+          type: string
+          format: date-time
+        pax:
+          type: integer
+          description: Total number of passengers
+        pax_details:
+          type: object
+          additionalProperties:
+            type: integer
+          example:
+            Adult: 2
+            Child: 1
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              type:
+                type: string
+        status:
+          type: string
+          enum: [PENDING_TICKET, TICKET_PURCHASED]
+        reference_number:
+          type: string
+          description: Uffizi confirmation code
+        notes:
+          type: string
+        guide_name:
+          type: string
+          description: Assigned guide for guided tours
+        has_audio_guide:
+          type: boolean
+          description: Whether booking includes audio guide (Timed Entry only)
+        audio_guide_sent_at:
+          type: string
+          format: date-time
+        audio_guide_username:
+          type: string
+        audio_guide_password:
+          type: string
+        audio_guide_url:
+          type: string
+        tickets_sent_at:
+          type: string
+          format: date-time
+        cancelled_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateBookingRequest:
+      type: object
+      required:
+        - bokun_booking_id
+        - bokun_product_id
+        - product_name
+        - customer_name
+        - tour_date
+        - pax
+      properties:
+        bokun_booking_id:
+          type: string
+        bokun_product_id:
+          type: string
+        product_name:
+          type: string
+        customer_name:
+          type: string
+        customer_email:
+          type: string
+        customer_phone:
+          type: string
+        tour_date:
+          type: string
+          format: date
+        pax:
+          type: integer
+          minimum: 1
+
+    UpdateBookingRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [PENDING_TICKET, TICKET_PURCHASED]
+        reference_number:
+          type: string
+        notes:
+          type: string
+        guide_name:
+          type: string
+        has_audio_guide:
+          type: boolean
+        audio_guide_username:
+          type: string
+        audio_guide_password:
+          type: string
+        audio_guide_url:
+          type: string
+
+    PaginatedBookings:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+        current_page:
+          type: integer
+        last_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+
+    GroupedBookingsResponse:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        bookings:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Booking'
+        booking_counts:
+          type: object
+          additionalProperties:
+            type: integer
+        date_range:
+          type: object
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+
+    BookingStats:
+      type: object
+      properties:
+        summary:
+          type: object
+          properties:
+            total_bookings:
+              type: integer
+            pending_tickets:
+              type: integer
+            purchased_tickets:
+              type: integer
+            upcoming_pending_7_days:
+              type: integer
+        by_product:
+          type: object
+          additionalProperties:
+            type: integer
+        by_day:
+          type: object
+          additionalProperties:
+            type: integer
+        date_range:
+          type: object
+          properties:
+            from:
+              type: string
+              format: date
+            to:
+              type: string
+              format: date
+
+    SendTicketRequest:
+      type: object
+      required:
+        - template_id
+      properties:
+        template_id:
+          type: integer
+          description: ID of the message template to use
+        reference_number:
+          type: string
+          description: Uffizi ticket reference (if not already set)
+        attachment_ids:
+          type: array
+          items:
+            type: integer
+          description: IDs of PDF attachments to include
+        custom_message:
+          type: string
+          description: Custom message content (overrides template)
+
+    SendTicketResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message_id:
+          type: integer
+        channel:
+          type: string
+          enum: [whatsapp, sms, email]
+        status:
+          type: string
+        external_id:
+          type: string
+          description: Twilio SID or mail ID
+
+    ChannelDetectionResponse:
+      type: object
+      properties:
+        has_phone:
+          type: boolean
+        has_email:
+          type: boolean
+        whatsapp_available:
+          type: boolean
+        recommended_channel:
+          type: string
+          enum: [whatsapp, email_sms, email_only]
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        booking_id:
+          type: integer
+        channel:
+          type: string
+          enum: [whatsapp, sms, email]
+        external_id:
+          type: string
+        recipient:
+          type: string
+        subject:
+          type: string
+        content:
+          type: string
+        status:
+          type: string
+          enum: [pending, queued, sent, delivered, read, failed]
+        error_message:
+          type: string
+        sent_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: string
+          format: date-time
+        read_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: integer
+        booking_id:
+          type: integer
+        message_id:
+          type: integer
+        original_name:
+          type: string
+        stored_name:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+          description: File size in bytes
+        public_url:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Template:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        channel:
+          type: string
+          enum: [email, whatsapp, sms]
+        language:
+          type: string
+        template_type:
+          type: string
+          enum: [ticket_only, ticket_with_audio]
+        subject:
+          type: string
+        content:
+          type: string
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    CreateTemplateRequest:
+      type: object
+      required:
+        - name
+        - channel
+        - language
+        - template_type
+        - content
+      properties:
+        name:
+          type: string
+        channel:
+          type: string
+          enum: [email, whatsapp, sms]
+        language:
+          type: string
+        template_type:
+          type: string
+          enum: [ticket_only, ticket_with_audio]
+        subject:
+          type: string
+        content:
+          type: string
+        is_default:
+          type: boolean
+          default: false
+        is_active:
+          type: boolean
+          default: true
+
+    UpdateTemplateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        subject:
+          type: string
+        content:
+          type: string
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+
+    WebhookLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        event_type:
+          type: string
+        confirmation_code:
+          type: string
+        status:
+          type: string
+          enum: [pending, processed, failed]
+        error_message:
+          type: string
+        retry_count:
+          type: integer
+        processed_at:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        error:
+          type: string
+
+    ValidationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: "The given data was invalid."
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+
+security:
+  - bearerAuth: []

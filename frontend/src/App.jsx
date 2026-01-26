@@ -9,6 +9,7 @@ import './App.css';
 // Lazy load heavy components for better initial load performance
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const WebhookLogs = lazy(() => import('./pages/WebhookLogs'));
+const TemplateAdmin = lazy(() => import('./pages/TemplateAdmin'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -89,6 +90,16 @@ function App() {
                 <ProtectedRoute>
                   <Suspense fallback={<PageLoader />}>
                     <WebhookLogs />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/templates"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<PageLoader />}>
+                    <TemplateAdmin />
                   </Suspense>
                 </ProtectedRoute>
               }

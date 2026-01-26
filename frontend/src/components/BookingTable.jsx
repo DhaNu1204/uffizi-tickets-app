@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import './BookingTable.css';
+import TicketWizard from './TicketWizard';
 
 // Guided tour product IDs that require a guide assignment
 const GUIDED_TOUR_IDS = ['961801', '962885', '962886', '1130528', '1135055'];
@@ -7,14 +8,20 @@ const GUIDED_TOUR_IDS = ['961801', '962885', '962886', '1130528', '1135055'];
 // Timed Entry product ID (only product with audio guide option)
 const TIMED_ENTRY_PRODUCT_ID = '961802';
 
-const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTypes = [] }) => {
+const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTypes = [], onRefresh }) => {
   const [selectedBooking, setSelectedBooking] = useState(null);
+  const [wizardBooking, setWizardBooking] = useState(null); // Booking for wizard flow
   const [refInput, setRefInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
   const [guideInput, setGuideInput] = useState('');
   const [sendingId, setSendingId] = useState(null); // Track which booking ticket is being toggled
   const [sendingAudioGuideId, setSendingAudioGuideId] = useState(null); // Track audio guide toggle
   const [copiedRef, setCopiedRef] = useState(null); // Track which reference was copied
+
+  // Check if booking is Timed Entry (eligible for wizard)
+  const isTimedEntry = (productId) => {
+    return String(productId) === TIMED_ENTRY_PRODUCT_ID;
+  };
 
   // Get short product type label
   const getProductType = (productId) => {
@@ -104,6 +111,38 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
       setTimeout(() => setCopiedRef(null), 2000);
     } catch (err) {
       console.error('Failed to copy:', err);
+    }
+  };
+
+  // Open wizard for Timed Entry tickets
+  const handleOpenWizard = (booking) => {
+    setWizardBooking(booking);
+  };
+
+  // Close wizard
+  const handleCloseWizard = () => {
+    setWizardBooking(null);
+  };
+
+  // Handle wizard completion
+  const handleWizardComplete = async (updatedData) => {
+    // Update the booking with wizard data
+    if (updatedData && wizardBooking) {
+      await onUpdate(wizardBooking.id, updatedData);
+    }
+    setWizardBooking(null);
+    // Refresh bookings list if callback provided
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  // Decide whether to open wizard or modal based on product type
+  const handleTicketAction = (booking) => {
+    if (isTimedEntry(booking.bokun_product_id)) {
+      handleOpenWizard(booking);
+    } else {
+      handleOpenModal(booking);
     }
   };
 
@@ -305,7 +344,7 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
           <div className="actions-cell">
             <button
               className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-              onClick={() => handleOpenModal(booking)}
+              onClick={() => handleTicketAction(booking)}
             >
               {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
             </button>
@@ -462,7 +501,7 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
           <div className="card-actions">
             <button
               className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-              onClick={() => handleOpenModal(booking)}
+              onClick={() => handleTicketAction(booking)}
             >
               {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
             </button>
@@ -696,7 +735,7 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                       <div className="actions-cell">
                         <button
                           className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-                          onClick={() => handleOpenModal(booking)}
+                          onClick={() => handleTicketAction(booking)}
                         >
                           {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
                         </button>
@@ -819,7 +858,7 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                     <div className="card-actions">
                       <button
                         className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-                        onClick={() => handleOpenModal(booking)}
+                        onClick={() => handleTicketAction(booking)}
                       >
                         {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
                       </button>
@@ -1029,6 +1068,15 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
             </div>
           </div>
         </div>
+      )}
+
+      {/* Ticket Sending Wizard (only for Timed Entry tickets) */}
+      {wizardBooking && (
+        <TicketWizard
+          booking={wizardBooking}
+          onClose={handleCloseWizard}
+          onComplete={handleWizardComplete}
+        />
       )}
     </div>
   );

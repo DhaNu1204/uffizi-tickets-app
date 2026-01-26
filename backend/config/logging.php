@@ -58,6 +58,24 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Sentry Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | Sends error-level and above logs to Sentry for centralized error tracking.
+        | Requires sentry/sentry-laravel package to be installed.
+        |
+        | To use: set LOG_STACK=single,sentry in your .env file
+        |
+        */
+
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('LOG_SENTRY_LEVEL', 'error'),
+            'bubble' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),
@@ -127,6 +145,39 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Request Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | Dedicated channel for HTTP request/response logging.
+        | Used by the RequestLogger middleware for debugging and audit trails.
+        |
+        | Enable via: LOG_REQUESTS=true in .env
+        | Configure routes: LOG_REQUEST_ROUTES=api/webhooks,api/bookings/sync
+        |
+        */
+
+        'request' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/requests.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_REQUEST_DAYS', 7),
+            'replace_placeholders' => true,
+        ],
+
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Request Logging Configuration
+    |--------------------------------------------------------------------------
+    |
+    | These options control the RequestLogger middleware behavior.
+    |
+    */
+
+    'log_requests' => env('LOG_REQUESTS', false),
+    'log_request_routes' => env('LOG_REQUEST_ROUTES', ''),
 
 ];

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Booking extends Model
 {
@@ -30,6 +31,9 @@ class Booking extends Model
         'cancelled_at',
         'tickets_sent_at',
         'audio_guide_sent_at',
+        'audio_guide_username',
+        'audio_guide_password',
+        'audio_guide_url',
     ];
 
     protected $appends = ['has_incomplete_participants'];
@@ -106,5 +110,62 @@ class Booking extends Model
     public function canHaveAudioGuide(): bool
     {
         return $this->isTimedEntry();
+    }
+
+    /**
+     * Get messages for this booking
+     */
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Message::class);
+    }
+
+    /**
+     * Get attachments for this booking
+     */
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(MessageAttachment::class);
+    }
+
+    /**
+     * Check if this booking has had tickets sent
+     */
+    public function hasTicketsSent(): bool
+    {
+        return $this->tickets_sent_at !== null;
+    }
+
+    /**
+     * Check if audio guide credentials are set
+     */
+    public function hasAudioGuideCredentials(): bool
+    {
+        return $this->has_audio_guide
+            && $this->audio_guide_username
+            && $this->audio_guide_password;
+    }
+
+    /**
+     * Get template variables for message rendering
+     */
+    public function getTemplateVariables(): array
+    {
+        $tourDate = $this->tour_date;
+        $formattedDate = $tourDate ? $tourDate->format('F j, Y') : '';
+        $formattedTime = $tourDate ? $tourDate->format('g:i A') : '';
+
+        return [
+            'customer_name' => $this->customer_name ?? 'Guest',
+            'customer_email' => $this->customer_email ?? '',
+            'tour_date' => $formattedDate,
+            'tour_time' => $formattedTime,
+            'product_name' => $this->product_name ?? '',
+            'pax' => (string) $this->pax,
+            'reference_number' => $this->reference_number ?? '',
+            'audio_guide_url' => $this->audio_guide_url ?? '',
+            'audio_guide_username' => $this->audio_guide_username ?? '',
+            'audio_guide_password' => $this->audio_guide_password ?? '',
+        ];
     }
 }

@@ -24,6 +24,10 @@ const Dashboard = () => {
   const touchEndX = useRef(null);
   const swipeContainerRef = useRef(null);
 
+  // Scroll position persistence
+  const bookingListRef = useRef(null);
+  const scrollRestorationAttempted = useRef(false);
+
   // Florence timezone for all date calculations
   const FLORENCE_TIMEZONE = 'Europe/Rome';
 
@@ -324,6 +328,66 @@ const Dashboard = () => {
     await logout();
   };
 
+  // Scroll position persistence helpers
+  const getScrollStorageKey = () => `uffizi_scroll_${formatDateKey(selectedDate)}`;
+
+  // Save scroll position (debounced)
+  const saveScrollPosition = useCallback(() => {
+    const container = bookingListRef.current;
+    if (container) {
+      sessionStorage.setItem(getScrollStorageKey(), container.scrollTop.toString());
+    }
+  }, [selectedDate]);
+
+  // Restore scroll position
+  const restoreScrollPosition = useCallback(() => {
+    const container = bookingListRef.current;
+    if (container && !scrollRestorationAttempted.current) {
+      const savedPosition = sessionStorage.getItem(getScrollStorageKey());
+      if (savedPosition) {
+        container.scrollTop = parseInt(savedPosition, 10);
+      }
+      scrollRestorationAttempted.current = true;
+    }
+  }, [selectedDate]);
+
+  // Handle scroll events with debounce
+  useEffect(() => {
+    const container = bookingListRef.current;
+    if (!container) return;
+
+    let timeoutId;
+    const handleScroll = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(saveScrollPosition, 100);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      clearTimeout(timeoutId);
+    };
+  }, [saveScrollPosition]);
+
+  // Restore scroll when bookings load
+  useEffect(() => {
+    if (!loading && selectedDayBookings) {
+      // Small delay to ensure DOM is ready
+      requestAnimationFrame(restoreScrollPosition);
+    }
+  }, [loading, selectedDayBookings, restoreScrollPosition]);
+
+  // Reset scroll restoration flag when date changes
+  useEffect(() => {
+    scrollRestorationAttempted.current = false;
+  }, [selectedDate]);
+
+  // Refresh handler for wizard completion
+  const handleRefreshBookings = useCallback(() => {
+    fetchBookings();
+    fetchStats();
+  }, [fetchBookings, fetchStats]);
+
   const summary = stats?.summary || {};
 
   return (
@@ -366,6 +430,13 @@ const Dashboard = () => {
                     <line x1="16" y1="17" x2="8" y2="17" />
                   </svg>
                   Webhook Logs
+                </button>
+                <button onClick={() => { setMenuOpen(false); navigate('/admin/templates'); }} className="dropdown-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    <line x1="9" y1="10" x2="15" y2="10" />
+                  </svg>
+                  Message Templates
                 </button>
                 <button onClick={handleLogout} className="dropdown-item logout">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -652,7 +723,10 @@ const Dashboard = () => {
           {/* Swipeable Content Area */}
           <div
             className="swipe-container"
-            ref={swipeContainerRef}
+            ref={(el) => {
+              swipeContainerRef.current = el;
+              bookingListRef.current = el;
+            }}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
@@ -686,6 +760,7 @@ const Dashboard = () => {
                 <BookingTable
                   bookings={selectedDayBookings.bookings}
                   onUpdate={handleUpdateBooking}
+                  onRefresh={handleRefreshBookings}
                   loading={false}
                   compact={true}
                   productTypes={productTypes}

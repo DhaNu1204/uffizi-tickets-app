@@ -42,4 +42,19 @@ return [
         'uffizi_product_ids' => explode(',', env('UFFIZI_PRODUCT_IDS', '')),
     ],
 
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
+        'sms_from' => env('TWILIO_SMS_FROM'),
+        'status_callback_url' => env('TWILIO_STATUS_CALLBACK_URL'),
+    ],
+
+    'aws' => [
+        'key' => env('AWS_ACCESS_KEY_ID'),
+        'secret' => env('AWS_SECRET_ACCESS_KEY'),
+        'region' => env('AWS_DEFAULT_REGION', 'eu-west-1'),
+        'bucket' => env('AWS_BUCKET'),
+    ],
+
 ];

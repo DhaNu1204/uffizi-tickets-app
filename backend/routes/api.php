@@ -6,6 +6,10 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\MessageController;
+use App\Http\Controllers\AttachmentController;
+use App\Http\Controllers\TemplateAdminController;
+use App\Http\Controllers\TwilioWebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,6 +23,9 @@ Route::get('/health/detailed', [HealthController::class, 'detailed']);
 
 // Webhook endpoint - verified via HMAC signature, not Sanctum
 Route::post('/webhook/bokun', [BookingController::class, 'handleWebhook']);
+
+// Twilio status callback - verified via Twilio signature
+Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status']);
 
 // Authentication routes - rate limited to prevent brute force
 Route::middleware('throttle:5,1')->group(function () {
@@ -64,6 +71,34 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('/webhooks/{id}/retry', [WebhookController::class, 'retry']);
     Route::post('/webhooks/retry-all', [WebhookController::class, 'retryAll']);
     Route::delete('/webhooks/cleanup', [WebhookController::class, 'cleanup']);
+
+    // Messaging Routes
+    Route::post('/bookings/{id}/send-ticket', [MessageController::class, 'sendTicket']);
+    Route::get('/bookings/{id}/detect-channel', [MessageController::class, 'detectChannel']);
+    Route::get('/bookings/{id}/messages', [MessageController::class, 'history']);
+    Route::post('/messages/preview', [MessageController::class, 'preview']);
+    Route::get('/messages/templates', [MessageController::class, 'templates']);
+
+    // Attachment Routes
+    Route::post('/bookings/{id}/attachments', [AttachmentController::class, 'store']);
+    Route::get('/bookings/{id}/attachments', [AttachmentController::class, 'index']);
+    Route::delete('/attachments/{id}', [AttachmentController::class, 'destroy']);
+    Route::get('/attachments/{id}/download', [AttachmentController::class, 'download']);
+
+    // Template Routes (for wizard)
+    Route::get('/templates/languages', [TemplateAdminController::class, 'getLanguages']);
+    Route::get('/templates/by-language-type', [TemplateAdminController::class, 'getByLanguageAndType']);
+
+    // Template Admin Routes
+    Route::prefix('admin')->group(function () {
+        Route::get('/templates', [TemplateAdminController::class, 'index']);
+        Route::get('/templates/{id}', [TemplateAdminController::class, 'show']);
+        Route::post('/templates', [TemplateAdminController::class, 'store']);
+        Route::put('/templates/{id}', [TemplateAdminController::class, 'update']);
+        Route::delete('/templates/{id}', [TemplateAdminController::class, 'destroy']);
+        Route::post('/templates/{id}/preview', [TemplateAdminController::class, 'preview']);
+        Route::post('/templates/{id}/duplicate', [TemplateAdminController::class, 'duplicate']);
+    });
 });
 
 /*
