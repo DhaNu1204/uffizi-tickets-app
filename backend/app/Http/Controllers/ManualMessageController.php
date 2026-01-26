@@ -214,4 +214,68 @@ class ManualMessageController extends Controller
             }),
         ]);
     }
+
+    /**
+     * Sync message statuses from Twilio
+     * POST /api/messages/sync-status
+     */
+    public function syncStatus(): JsonResponse
+    {
+        try {
+            $client = new \Twilio\Rest\Client(
+                config('services.twilio.account_sid'),
+                config('services.twilio.auth_token')
+            );
+
+            // Get pending/sent messages from last 24 hours
+            $messages = \App\Models\Message::whereNull('booking_id')
+                ->whereNotNull('external_id')
+                ->whereIn('status', ['sent', 'queued', 'pending'])
+                ->where('created_at', '>=', now()->subDay())
+                ->get();
+
+            $updated = 0;
+
+            foreach ($messages as $msg) {
+                try {
+                    $twilioMsg = $client->messages($msg->external_id)->fetch();
+
+                    if ($twilioMsg->status === 'delivered') {
+                        $msg->markDelivered();
+                        $updated++;
+                    } elseif ($twilioMsg->status === 'read') {
+                        $msg->markRead();
+                        $updated++;
+                    } elseif (in_array($twilioMsg->status, ['failed', 'undelivered'])) {
+                        $errorMsg = $twilioMsg->errorCode
+                            ? "Error {$twilioMsg->errorCode}"
+                            : "Status: {$twilioMsg->status}";
+                        $msg->markFailed($errorMsg);
+                        $updated++;
+                    }
+                } catch (\Exception $e) {
+                    Log::warning('Failed to sync message status', [
+                        'message_id' => $msg->id,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => "Synced {$updated} message(s)",
+                'updated' => $updated,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to sync message statuses', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'errors' => ['Failed to sync statuses: ' . $e->getMessage()],
+            ], 500);
+        }
+    }
 }

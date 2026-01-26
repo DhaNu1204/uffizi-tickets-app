@@ -20,6 +20,7 @@ const ManualSendModal = ({ isOpen, onClose }) => {
   // History state
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   // Load history when tab changes
   useEffect(() => {
@@ -40,6 +41,41 @@ const ManualSendModal = ({ isOpen, onClose }) => {
     } finally {
       setLoadingHistory(false);
     }
+  };
+
+  // Sync message statuses from Twilio
+  const syncStatus = async () => {
+    setSyncing(true);
+    try {
+      const response = await messagesAPI.syncStatus();
+      if (response.data.success) {
+        toast.success(response.data.message || 'Statuses synced');
+        loadHistory(); // Reload to show updated statuses
+      }
+    } catch (err) {
+      console.error('Failed to sync statuses:', err);
+      toast.error('Failed to sync message statuses');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // Get human-readable error message
+  const getErrorExplanation = (errorMsg) => {
+    if (!errorMsg) return null;
+    if (errorMsg.includes('63016')) {
+      return '24-hour window expired - recipient must message you first';
+    }
+    if (errorMsg.includes('63024')) {
+      return 'Template required for business-initiated message';
+    }
+    if (errorMsg.includes('21211') || errorMsg.includes('21614')) {
+      return 'Invalid phone number';
+    }
+    if (errorMsg.includes('21408')) {
+      return 'Phone number not WhatsApp enabled';
+    }
+    return errorMsg;
   };
 
   // Reset form
@@ -292,26 +328,45 @@ const ManualSendModal = ({ isOpen, onClose }) => {
                       <div className="history-content">
                         {msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content}
                       </div>
+                      {/* Error explanation */}
+                      {msg.error_message && (
+                        <div className="history-error-box">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <line x1="12" y1="8" x2="12" y2="12" />
+                            <line x1="12" y1="16" x2="12.01" y2="16" />
+                          </svg>
+                          <span>{getErrorExplanation(msg.error_message)}</span>
+                        </div>
+                      )}
                       <div className="history-footer">
                         <span className="history-date">{formatDate(msg.created_at)}</span>
                         {msg.delivered_at && (
                           <span className="history-delivered">Delivered: {formatDate(msg.delivered_at)}</span>
-                        )}
-                        {msg.error_message && (
-                          <span className="history-error" title={msg.error_message}>Error</span>
                         )}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
-              <button className="btn btn-secondary refresh-btn" onClick={loadHistory} disabled={loadingHistory}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="23 4 23 10 17 10" />
-                  <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                </svg>
-                Refresh
-              </button>
+              <div className="history-actions">
+                <button className="btn btn-secondary" onClick={loadHistory} disabled={loadingHistory}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  {loadingHistory ? 'Loading...' : 'Refresh'}
+                </button>
+                <button className="btn btn-secondary" onClick={syncStatus} disabled={syncing || loadingHistory}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 2v6h-6" />
+                    <path d="M3 12a9 9 0 0 1 15-6.7L21 8" />
+                    <path d="M3 22v-6h6" />
+                    <path d="M21 12a9 9 0 0 1-15 6.7L3 16" />
+                  </svg>
+                  {syncing ? 'Syncing...' : 'Sync Status'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -395,6 +450,20 @@ const ManualSendModal = ({ isOpen, onClose }) => {
                       </button>
                     </div>
                   </div>
+
+                  {/* WhatsApp 24-Hour Warning */}
+                  {channel === 'whatsapp' && (
+                    <div className="warning-box">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                        <line x1="12" y1="9" x2="12" y2="13" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <div>
+                        <strong>WhatsApp 24-Hour Rule:</strong> You can only send freeform messages to users who have messaged your business within 24 hours. For new contacts, use SMS or Email instead.
+                      </div>
+                    </div>
+                  )}
 
                   {/* Recipient */}
                   <div className="form-group">

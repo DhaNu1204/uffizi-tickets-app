@@ -101,6 +101,9 @@ export const messagesAPI = {
 
   // Get manual message history
   manualHistory: (limit = 50) => api.get('/messages/manual-history', { params: { limit } }),
+
+  // Sync message statuses from Twilio
+  syncStatus: () => api.post('/messages/sync-status'),
 };
 
 // Attachment endpoints

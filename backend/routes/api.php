@@ -86,8 +86,9 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::post('/messages/send-manual', [ManualMessageController::class, 'send']);
     });
 
-    // Manual Message History
+    // Manual Message History & Status Sync
     Route::get('/messages/manual-history', [ManualMessageController::class, 'history']);
+    Route::post('/messages/sync-status', [ManualMessageController::class, 'syncStatus']);
 
     // Attachment Routes
     Route::post('/bookings/{id}/attachments', [AttachmentController::class, 'store']);
