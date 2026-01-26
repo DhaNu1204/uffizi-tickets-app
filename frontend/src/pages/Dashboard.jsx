@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { bookingsAPI } from '../services/api';
 import BookingTable from '../components/BookingTable';
+import ManualSendModal from '../components/ManualSendModal';
 import { PRODUCT_TYPES } from '../config/products';
 import './Dashboard.css';
 
@@ -18,6 +19,7 @@ const Dashboard = () => {
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [manualSendOpen, setManualSendOpen] = useState(false);
 
   // Swipe gesture state
   const touchStartX = useRef(null);
@@ -438,6 +440,13 @@ const Dashboard = () => {
                   </svg>
                   Message Templates
                 </button>
+                <button onClick={() => { setMenuOpen(false); setManualSendOpen(true); }} className="dropdown-item">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="22" y1="2" x2="11" y2="13" />
+                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                  </svg>
+                  Manual Send
+                </button>
                 <button onClick={handleLogout} className="dropdown-item logout">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
@@ -775,6 +784,12 @@ const Dashboard = () => {
       {calendarOpen && (
         <div className="calendar-overlay" onClick={() => setCalendarOpen(false)} />
       )}
+
+      {/* Manual Send Modal */}
+      <ManualSendModal
+        isOpen={manualSendOpen}
+        onClose={() => setManualSendOpen(false)}
+      />
     </div>
   );
 };

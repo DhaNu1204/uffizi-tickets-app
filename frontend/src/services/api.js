@@ -54,6 +54,8 @@ export const bookingsAPI = {
   sync: () => api.post('/bookings/sync'),
   autoSync: () => api.post('/bookings/auto-sync'),
   import: (dateFrom, dateTo) => api.post('/bookings/import', { date_from: dateFrom, date_to: dateTo }),
+  // Wizard progress tracking
+  updateWizardProgress: (id, step, action) => api.post(`/bookings/${id}/wizard-progress`, { step, action }),
 };
 
 // Webhook endpoints
@@ -82,6 +84,23 @@ export const messagesAPI = {
 
   // Get available templates
   templates: (params = {}) => api.get('/messages/templates', { params }),
+
+  // Send manual message (without booking)
+  sendManual: (data) => {
+    const formData = new FormData();
+    formData.append('channel', data.channel);
+    formData.append('recipient', data.recipient);
+    formData.append('message', data.message);
+    if (data.subject) formData.append('subject', data.subject);
+    if (data.attachment) formData.append('attachment', data.attachment);
+
+    return api.post('/messages/send-manual', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
+
+  // Get manual message history
+  manualHistory: (limit = 50) => api.get('/messages/manual-history', { params: { limit } }),
 };
 
 // Attachment endpoints

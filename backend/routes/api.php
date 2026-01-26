@@ -7,6 +7,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ManualMessageController;
 use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\TemplateAdminController;
 use App\Http\Controllers\TwilioWebhookController;
@@ -54,6 +55,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::post('/bookings', [BookingController::class, 'store']);
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
     Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
+    Route::post('/bookings/{id}/wizard-progress', [BookingController::class, 'updateWizardProgress']);
 
     // Sync & Import from Bokun - rate limit (10 per minute for dev, reduce for production)
     Route::middleware('throttle:10,1')->group(function () {
@@ -78,6 +80,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/bookings/{id}/messages', [MessageController::class, 'history']);
     Route::post('/messages/preview', [MessageController::class, 'preview']);
     Route::get('/messages/templates', [MessageController::class, 'templates']);
+
+    // Manual Message Send (rate limited to 10 per minute)
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('/messages/send-manual', [ManualMessageController::class, 'send']);
+    });
+
+    // Manual Message History
+    Route::get('/messages/manual-history', [ManualMessageController::class, 'history']);
 
     // Attachment Routes
     Route::post('/bookings/{id}/attachments', [AttachmentController::class, 'store']);
