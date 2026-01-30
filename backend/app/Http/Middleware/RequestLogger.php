@@ -53,12 +53,34 @@ class RequestLogger
     ];
 
     /**
+     * Suspicious patterns that may indicate attack attempts.
+     */
+    protected array $suspiciousPatterns = [
+        // SQL injection patterns
+        '/(\b(SELECT|INSERT|UPDATE|DELETE|DROP|UNION|ALTER|CREATE)\b.*\b(FROM|INTO|TABLE|WHERE)\b)/i',
+        '/(\'|\").*(--)|(\/\*.*\*\/)/',
+        '/(\bOR\b|\bAND\b)\s+[\'\"]?\d+[\'\"]?\s*=\s*[\'\"]?\d+/i',
+        // XSS patterns
+        '/<script[^>]*>.*<\/script>/is',
+        '/javascript\s*:/i',
+        '/on\w+\s*=/i',
+        '/<iframe/i',
+        // Path traversal
+        '/\.\.[\/\\\\]/',
+        // Command injection
+        '/[;&|`$]/',
+    ];
+
+    /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Check for suspicious activity (always runs)
+        $this->checkSuspiciousActivity($request);
+
         // Check if logging is enabled
         if (!$this->shouldLog($request)) {
             return $next($request);
@@ -80,6 +102,57 @@ class RequestLogger
         $this->logResponse($request, $response, $durationMs);
 
         return $response;
+    }
+
+    /**
+     * Check for suspicious patterns in the request.
+     * Logs warnings for potential attack attempts.
+     */
+    protected function checkSuspiciousActivity(Request $request): void
+    {
+        $suspiciousFindings = [];
+
+        // Check all input data
+        $allInput = json_encode($request->all(), JSON_UNESCAPED_UNICODE);
+        $queryString = $request->getQueryString() ?? '';
+        $path = $request->path();
+
+        $checkData = $allInput . $queryString . $path;
+
+        foreach ($this->suspiciousPatterns as $pattern) {
+            if (preg_match($pattern, $checkData)) {
+                $suspiciousFindings[] = [
+                    'pattern' => $pattern,
+                    'matched' => true,
+                ];
+            }
+        }
+
+        if (!empty($suspiciousFindings)) {
+            Log::warning('Suspicious request detected', [
+                'ip' => $request->ip(),
+                'method' => $request->method(),
+                'path' => $request->path(),
+                'user_agent' => $request->userAgent(),
+                'findings_count' => count($suspiciousFindings),
+                'user_id' => $request->user()?->id,
+            ]);
+
+            // Report to Sentry if available
+            if (function_exists('app') && app()->bound('sentry')) {
+                \Sentry\addBreadcrumb(new \Sentry\Breadcrumb(
+                    \Sentry\Breadcrumb::LEVEL_WARNING,
+                    \Sentry\Breadcrumb::TYPE_DEFAULT,
+                    'security',
+                    'Suspicious request pattern detected',
+                    [
+                        'ip' => $request->ip(),
+                        'path' => $request->path(),
+                        'findings' => count($suspiciousFindings),
+                    ]
+                ));
+            }
+        }
     }
 
     /**
