@@ -59,7 +59,9 @@ return [
     |
     */
 
-    'traces_sample_rate' => (float) env('SENTRY_TRACES_SAMPLE_RATE', 0.1),
+    // Temporarily set to 0 to prevent timeout issues
+    // Set back to 0.1 in production with proper async sending
+    'traces_sample_rate' => (float) env('SENTRY_TRACES_SAMPLE_RATE', 0),
 
     /*
     |--------------------------------------------------------------------------

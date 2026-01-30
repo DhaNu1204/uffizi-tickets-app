@@ -1,26 +1,57 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import WizardProgress from './WizardProgress';
 import WizardNavigation from './WizardNavigation';
 import Step1BookingDetails from './steps/Step1BookingDetails';
 import Step2TicketReference, { validateReferenceCode } from './steps/Step2TicketReference';
 import Step3FileAttach from './steps/Step3FileAttach';
+import Step4AudioGuide from './steps/Step4AudioGuide';
 import Step4TemplateSelect from './steps/Step4TemplateSelect';
 import Step5Preview from './steps/Step5Preview';
 import Step6SendStatus from './steps/Step6SendStatus';
 import CustomMessageModal from './CustomMessageModal';
-import { bookingsAPI, messagesAPI, attachmentsAPI } from '../../services/api';
+import { bookingsAPI, messagesAPI } from '../../services/api';
 import './TicketWizard.css';
 
-const STEPS = [
-  { id: 1, title: 'Booking Details', shortTitle: 'Details' },
-  { id: 2, title: 'Ticket Reference', shortTitle: 'Reference' },
-  { id: 3, title: 'Attach PDF', shortTitle: 'Attach' },
-  { id: 4, title: 'Select Language', shortTitle: 'Language' },
-  { id: 5, title: 'Preview & Confirm', shortTitle: 'Preview' },
-  { id: 6, title: 'Send Status', shortTitle: 'Send' },
-];
+/**
+ * Get steps based on whether booking has audio guide
+ * Audio guide bookings: 7 steps (includes Audio Guide step)
+ * Regular bookings: 6 steps
+ */
+const getSteps = (hasAudioGuide) => {
+  const steps = [
+    { id: 1, title: 'Booking Details', shortTitle: 'Details' },
+    { id: 2, title: 'Ticket Reference', shortTitle: 'Reference' },
+    { id: 3, title: 'Attach PDF', shortTitle: 'Attach' },
+  ];
+
+  if (hasAudioGuide) {
+    steps.push({ id: 4, title: 'Audio Guide', shortTitle: 'Audio' });
+    steps.push({ id: 5, title: 'Select Language', shortTitle: 'Language' });
+    steps.push({ id: 6, title: 'Preview & Confirm', shortTitle: 'Preview' });
+    steps.push({ id: 7, title: 'Send Status', shortTitle: 'Send' });
+  } else {
+    steps.push({ id: 4, title: 'Select Language', shortTitle: 'Language' });
+    steps.push({ id: 5, title: 'Preview & Confirm', shortTitle: 'Preview' });
+    steps.push({ id: 6, title: 'Send Status', shortTitle: 'Send' });
+  }
+
+  return steps;
+};
 
 export default function TicketWizard({ booking, onClose, onComplete }) {
+  // Get dynamic steps based on whether booking has audio guide
+  const hasAudioGuide = booking.has_audio_guide;
+  const STEPS = useMemo(() => getSteps(hasAudioGuide), [hasAudioGuide]);
+  const totalSteps = STEPS.length;
+
+  // Step mappings for audio guide vs non-audio guide bookings
+  // Audio guide: 1=Details, 2=Reference, 3=Attach, 4=Audio, 5=Language, 6=Preview, 7=Send
+  // Regular:     1=Details, 2=Reference, 3=Attach, 4=Language, 5=Preview, 6=Send
+  const STEP_LANGUAGE = hasAudioGuide ? 5 : 4;
+  const STEP_PREVIEW = hasAudioGuide ? 6 : 5;
+  const STEP_SEND = hasAudioGuide ? 7 : 6;
+  const STEP_AUDIO = hasAudioGuide ? 4 : null;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -31,31 +62,47 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     // Step 2: Ticket reference
     referenceNumber: booking.reference_number || '',
     guideName: booking.guide_name || '',
-    // Audio guide credentials
+    // Audio guide credentials (may come from VOX or manual entry)
     audioGuideUsername: booking.audio_guide_username || '',
     audioGuidePassword: booking.audio_guide_password || '',
     audioGuideUrl: booking.audio_guide_url || '',
+    // VOX Audio Guide fields
+    voxDynamicLink: booking.vox_dynamic_link || null,
+    voxAccountId: booking.vox_account_id || null,
+    voxUsername: null,
+    voxPassword: null,
+    hasVoxAccount: !!booking.vox_dynamic_link,
     // Step 3: Attachments
     attachments: [],
-    // Step 4: Language & Template
+    // Step 4/5: Language & Template
     language: 'en',
     customMessage: null, // For custom message { subject, content }
-    // Step 5: Channel detection
+    // Step 5/6: Channel detection
     channelInfo: null,
     preview: null,
-    // Step 6: Send status
+    // Step 6/7: Send status
     sendResult: null,
     isSending: false,
   });
 
-  // Validation state per step
-  const [stepValidation, setStepValidation] = useState({
-    1: true, // Always valid (read-only)
-    2: false,
-    3: false,
-    4: true, // Default language is selected
-    5: true, // Preview is read-only
-    6: true, // Send step
+  // Validation state per step (dynamic based on audio guide)
+  const [stepValidation, setStepValidation] = useState(() => {
+    const validation = {
+      1: true, // Always valid (read-only)
+      2: false,
+      3: false,
+    };
+    if (hasAudioGuide) {
+      validation[4] = false; // Audio guide step - needs VOX account
+      validation[5] = true;  // Language - default selected
+      validation[6] = true;  // Preview - read-only
+      validation[7] = true;  // Send step
+    } else {
+      validation[4] = true;  // Language - default selected
+      validation[5] = true;  // Preview - read-only
+      validation[6] = true;  // Send step
+    }
+    return validation;
   });
 
   // Track wizard progress in database
@@ -71,32 +118,34 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     }
   }, [currentStep, booking.id]);
 
-  // Validate step 2: Reference number format (and audio guide if applicable)
+  // Validate step 2: Reference number format
+  // Note: Audio guide credentials are now handled in Step 4 (Audio Guide step)
   useEffect(() => {
     const referenceValidation = validateReferenceCode(wizardData.referenceNumber);
-    const hasValidReference = referenceValidation.valid;
-
-    let hasAudioGuide = true;
-    if (booking.has_audio_guide) {
-      hasAudioGuide =
-        wizardData.audioGuideUsername.trim().length > 0 &&
-        wizardData.audioGuidePassword.trim().length > 0;
-    }
-
-    setStepValidation((prev) => ({ ...prev, 2: hasValidReference && hasAudioGuide }));
-  }, [wizardData.referenceNumber, wizardData.audioGuideUsername, wizardData.audioGuidePassword, booking.has_audio_guide]);
+    setStepValidation((prev) => ({ ...prev, 2: referenceValidation.valid }));
+  }, [wizardData.referenceNumber]);
 
   // Validate step 3: At least one attachment
   useEffect(() => {
     setStepValidation((prev) => ({ ...prev, 3: wizardData.attachments.length > 0 }));
   }, [wizardData.attachments]);
 
-  // Detect channel when reaching step 5
+  // Validate step 4 (Audio Guide): Must have VOX account if booking has audio guide
   useEffect(() => {
-    if (currentStep === 5 && !wizardData.channelInfo) {
+    if (STEP_AUDIO) {
+      setStepValidation((prev) => ({
+        ...prev,
+        [STEP_AUDIO]: wizardData.hasVoxAccount,
+      }));
+    }
+  }, [wizardData.hasVoxAccount, STEP_AUDIO]);
+
+  // Detect channel when reaching preview step
+  useEffect(() => {
+    if (currentStep === STEP_PREVIEW && !wizardData.channelInfo) {
       detectChannel();
     }
-  }, [currentStep]);
+  }, [currentStep, STEP_PREVIEW]);
 
   const detectChannel = async () => {
     try {
@@ -152,9 +201,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
         await bookingsAPI.update(booking.id, {
           reference_number: wizardData.referenceNumber,
           guide_name: wizardData.guideName || null,
-          audio_guide_username: wizardData.audioGuideUsername || null,
-          audio_guide_password: wizardData.audioGuidePassword || null,
-          audio_guide_url: wizardData.audioGuideUrl || null,
           status: 'TICKET_PURCHASED',
         });
       } catch (err) {
@@ -166,12 +212,12 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
       }
     }
 
-    // Refresh preview when changing language
-    if (currentStep === 4) {
+    // Refresh preview when changing language (step varies based on audio guide)
+    if (currentStep === STEP_LANGUAGE) {
       setWizardData((prev) => ({ ...prev, preview: null, channelInfo: null }));
     }
 
-    if (currentStep < STEPS.length) {
+    if (currentStep < totalSteps) {
       setCurrentStep((prev) => prev + 1);
     }
   };
@@ -205,9 +251,9 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
         isSending: false,
       });
 
-      // Move to step 6 to show result
-      if (currentStep !== 6) {
-        setCurrentStep(6);
+      // Move to send status step to show result
+      if (currentStep !== STEP_SEND) {
+        setCurrentStep(STEP_SEND);
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to send ticket');
@@ -218,7 +264,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
   const handleClose = () => {
     // If ticket was sent successfully, mark as complete and call onComplete
     if (wizardData.sendResult?.success) {
-      bookingsAPI.updateWizardProgress(booking.id, 6, 'complete').catch(console.error);
+      bookingsAPI.updateWizardProgress(booking.id, STEP_SEND, 'complete').catch(console.error);
       onComplete?.(wizardData.sendResult);
     } else {
       // Mark as abandoned if closed without completing
@@ -228,60 +274,82 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
   };
 
   const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return <Step1BookingDetails booking={booking} />;
-      case 2:
-        return (
-          <Step2TicketReference
-            booking={booking}
-            data={wizardData}
-            onChange={updateWizardData}
-          />
-        );
-      case 3:
-        return (
-          <Step3FileAttach
-            booking={booking}
-            attachments={wizardData.attachments}
-            onChange={updateWizardData}
-          />
-        );
-      case 4:
-        return (
-          <Step4TemplateSelect
-            booking={booking}
-            language={wizardData.language}
-            detectedLanguage={wizardData.detectedLanguage}
-            onChange={updateWizardData}
-            onOpenCustomModal={handleOpenCustomModal}
-          />
-        );
-      case 5:
-        return (
-          <Step5Preview
-            booking={booking}
-            wizardData={wizardData}
-            isLoading={isLoading}
-          />
-        );
-      case 6:
-        return (
-          <Step6SendStatus
-            booking={booking}
-            wizardData={wizardData}
-          />
-        );
-      default:
-        return null;
+    // Steps 1-3 are always the same
+    if (currentStep === 1) {
+      return <Step1BookingDetails booking={booking} />;
     }
+    if (currentStep === 2) {
+      return (
+        <Step2TicketReference
+          booking={booking}
+          data={wizardData}
+          onChange={updateWizardData}
+        />
+      );
+    }
+    if (currentStep === 3) {
+      return (
+        <Step3FileAttach
+          booking={booking}
+          attachments={wizardData.attachments}
+          onChange={updateWizardData}
+        />
+      );
+    }
+
+    // Step 4: Audio Guide (only if booking has audio guide)
+    if (currentStep === STEP_AUDIO) {
+      return (
+        <Step4AudioGuide
+          booking={booking}
+          wizardData={wizardData}
+          onChange={updateWizardData}
+        />
+      );
+    }
+
+    // Language selection step
+    if (currentStep === STEP_LANGUAGE) {
+      return (
+        <Step4TemplateSelect
+          booking={booking}
+          language={wizardData.language}
+          detectedLanguage={wizardData.detectedLanguage}
+          onChange={updateWizardData}
+          onOpenCustomModal={handleOpenCustomModal}
+        />
+      );
+    }
+
+    // Preview step
+    if (currentStep === STEP_PREVIEW) {
+      return (
+        <Step5Preview
+          booking={booking}
+          wizardData={wizardData}
+          isLoading={isLoading}
+        />
+      );
+    }
+
+    // Send status step
+    if (currentStep === STEP_SEND) {
+      return (
+        <Step6SendStatus
+          booking={booking}
+          wizardData={wizardData}
+        />
+      );
+    }
+
+    return null;
   };
 
   const isCurrentStepValid = stepValidation[currentStep];
-  const canGoNext = isCurrentStepValid && currentStep < STEPS.length && !isLoading;
-  const canGoBack = currentStep > 1 && currentStep < 6 && !wizardData.isSending;
-  const showSendButton = currentStep === 5 && !wizardData.sendResult;
-  const showCloseButton = currentStep === 6 && wizardData.sendResult;
+  const canGoNext = isCurrentStepValid && currentStep < totalSteps && !isLoading;
+  const canGoBack = currentStep > 1 && currentStep < STEP_SEND && !wizardData.isSending;
+  const showSendButton = currentStep === STEP_PREVIEW && !wizardData.sendResult;
+  const showCloseButton = currentStep === STEP_SEND && wizardData.sendResult;
 
   return (
     <div className="ticket-wizard-overlay" onClick={handleClose}>
@@ -307,7 +375,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
 
         <WizardNavigation
           currentStep={currentStep}
-          totalSteps={STEPS.length}
+          totalSteps={totalSteps}
           canGoBack={canGoBack}
           canGoNext={canGoNext}
           onBack={handleBack}

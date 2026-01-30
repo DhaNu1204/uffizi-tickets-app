@@ -162,8 +162,26 @@ export const attachmentsAPI = {
   // Delete an attachment
   delete: (attachmentId) => api.delete(`/attachments/${attachmentId}`),
 
-  // Get download URL
+  // Get download URL (legacy)
   download: (attachmentId) => api.get(`/attachments/${attachmentId}/download`),
+
+  // Get temporary download link (new format)
+  getDownloadLink: (attachmentId) => api.get(`/attachments/${attachmentId}/download-link`),
+};
+
+// VOX/PopGuide Audio Guide API
+export const voxAPI = {
+  // Create VOX account for a booking (auto-generates audio guide credentials)
+  createAccount: (bookingId) => api.post(`/bookings/${bookingId}/create-vox-account`),
+
+  // Get VOX account status for a booking
+  getStatus: (bookingId) => api.get(`/bookings/${bookingId}/vox-status`),
+
+  // Test VOX API connection (admin)
+  testConnection: () => api.get('/vox/test'),
+
+  // Get VOX account details by account ID
+  getAccount: (accountId) => api.get(`/vox/accounts/${accountId}`),
 };
 
 // Template admin endpoints

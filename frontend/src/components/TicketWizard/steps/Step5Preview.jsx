@@ -1,3 +1,5 @@
+import './Steps.css';
+
 export default function Step5Preview({ booking, wizardData, isLoading }) {
   const { channelInfo, preview, attachments, language, customMessage } = wizardData;
   const isCustomMessage = language === 'custom' && customMessage;
@@ -96,6 +98,17 @@ export default function Step5Preview({ booking, wizardData, isLoading }) {
           {attachments.length} PDF file{attachments.length !== 1 ? 's' : ''} attached
         </div>
       </div>
+
+      {/* Audio Guide Section */}
+      {wizardData.hasVoxAccount && wizardData.voxDynamicLink && (
+        <div className="preview-section audio-guide-preview">
+          <h4>🎧 Audio Guide</h4>
+          <div className="audio-guide-info">
+            <p>PopGuide link will be included in the message:</p>
+            <code>{wizardData.voxDynamicLink}</code>
+          </div>
+        </div>
+      )}
 
       {/* Custom Message Preview */}
       {isCustomMessage && (

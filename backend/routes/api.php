@@ -13,6 +13,7 @@ use App\Http\Controllers\TemplateAdminController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MonitoringController;
+use App\Http\Controllers\VoxController;
 
 /*
 |--------------------------------------------------------------------------
@@ -101,6 +102,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::get('/bookings/{id}/attachments', [AttachmentController::class, 'index']);
     Route::delete('/attachments/{id}', [AttachmentController::class, 'destroy']);
     Route::get('/attachments/{id}/download', [AttachmentController::class, 'download']);
+    Route::get('/attachments/{id}/download-link', [AttachmentController::class, 'getDownloadLink']);
 
     // Template Routes (for wizard)
     Route::get('/templates/languages', [TemplateAdminController::class, 'getLanguages']);
@@ -133,6 +135,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
         Route::get('/channel-health', [MonitoringController::class, 'channelHealth']);
         Route::get('/daily-summary', [MonitoringController::class, 'dailySummary']);
     });
+
+    // VOX/PopGuide Audio Guide Routes
+    Route::post('/bookings/{id}/create-vox-account', [VoxController::class, 'createAccount']);
+    Route::get('/bookings/{id}/vox-status', [VoxController::class, 'getStatus']);
+    Route::get('/vox/test', [VoxController::class, 'testConnection']);
+    Route::get('/vox/accounts/{accountId}', [VoxController::class, 'getAccount']);
 });
 
 /*

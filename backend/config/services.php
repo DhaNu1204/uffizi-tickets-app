@@ -57,4 +57,11 @@ return [
         'bucket' => env('AWS_BUCKET'),
     ],
 
+    'vox' => [
+        'api_key' => env('VOX_API_KEY'),
+        'api_secret' => env('VOX_API_SECRET'),
+        'base_url' => env('VOX_BASE_URL', 'https://popguide-staging.herokuapp.com'),
+        'environment' => env('VOX_ENVIRONMENT', 'staging'),
+    ],
+
 ];

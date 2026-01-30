@@ -37,6 +37,10 @@ class Booking extends Model
         'wizard_started_at',
         'wizard_last_step',
         'wizard_abandoned_at',
+        'vox_dynamic_link',
+        'vox_account_id',
+        'vox_created_at',
+        'ticket_type',
     ];
 
     protected $appends = ['has_incomplete_participants', 'wizard_status'];
@@ -52,6 +56,7 @@ class Booking extends Model
         'wizard_started_at' => 'datetime',
         'wizard_last_step' => 'integer',
         'wizard_abandoned_at' => 'datetime',
+        'vox_created_at' => 'datetime',
     ];
 
     /**
@@ -228,5 +233,52 @@ class Booking extends Model
         return $this->isTimedEntry()
             && !$this->tickets_sent_at
             && $this->wizard_abandoned_at !== null;
+    }
+
+    /**
+     * Check if this booking has an audio guide
+     */
+    public function hasAudioGuide(): bool
+    {
+        return $this->has_audio_guide === true;
+    }
+
+    /**
+     * Check if this booking needs a VOX account created
+     * (has audio guide but no VOX link yet)
+     */
+    public function needsVoxAccount(): bool
+    {
+        return $this->hasAudioGuide() && empty($this->vox_dynamic_link);
+    }
+
+    /**
+     * Check if this booking already has a VOX account
+     */
+    public function hasVoxAccount(): bool
+    {
+        return !empty($this->vox_dynamic_link);
+    }
+
+    /**
+     * Get the ticket type for template selection
+     * Returns 'ticket_with_audio' if booking has audio guide, otherwise 'ticket_only'
+     */
+    public function getTicketType(): string
+    {
+        return $this->hasAudioGuide() ? 'ticket_with_audio' : 'ticket_only';
+    }
+
+    /**
+     * Set VOX account details after creation
+     */
+    public function setVoxAccount(string $dynamicLink, string $accountId): void
+    {
+        $this->update([
+            'vox_dynamic_link' => $dynamicLink,
+            'vox_account_id' => $accountId,
+            'vox_created_at' => now(),
+            'ticket_type' => 'ticket_with_audio',
+        ]);
     }
 }

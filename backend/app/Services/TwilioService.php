@@ -98,7 +98,66 @@ class TwilioService
     }
 
     /**
-     * Send WhatsApp message
+     * Get WhatsApp Content Template SID for a booking
+     *
+     * @param string $language Language code (en, it, es, etc.)
+     * @param bool $hasAudioGuide Whether booking includes audio guide
+     * @return string|null Content Template SID or null if not found
+     */
+    public function getWhatsAppTemplateSid(string $language, bool $hasAudioGuide): ?string
+    {
+        $templateType = $hasAudioGuide ? 'ticket_with_audio' : 'ticket_only';
+        $templates = config("whatsapp_templates.{$templateType}", []);
+
+        // Try requested language
+        if (isset($templates[$language])) {
+            return $templates[$language];
+        }
+
+        // Fall back to English
+        $fallbackLanguage = config('whatsapp_templates.fallback_language', 'en');
+        return $templates[$fallbackLanguage] ?? null;
+    }
+
+    /**
+     * Build Content Template variables for WhatsApp
+     *
+     * @param Booking $booking The booking to build variables for
+     * @param bool $hasAudioGuide Whether to include audio guide link
+     * @return array Variables in Twilio format ['1' => 'value', '2' => 'value', ...]
+     */
+    public function buildTemplateVariables(Booking $booking, bool $hasAudioGuide): array
+    {
+        // Format entry datetime (e.g., "January 30, 2026 at 10:00 AM")
+        $entryDatetime = $booking->tour_date
+            ? $booking->tour_date->format('F j, Y') . ' at ' . ($booking->tour_time ?? '10:00 AM')
+            : 'Your scheduled time';
+
+        // Get URLs from config
+        $onlineGuideUrl = config('whatsapp_templates.urls.online_guide', 'https://uffizi.florencewithlocals.com');
+        $knowBeforeYouGoUrl = config('whatsapp_templates.urls.know_before_you_go', 'https://florencewithlocals.com/uffizi-know-before-you-go');
+
+        if ($hasAudioGuide) {
+            // ticket_with_audio template: customer_name, entry_datetime, popguide_dynamic_link, know_before_you_go_url
+            return [
+                '1' => $booking->customer_name ?? 'Guest',
+                '2' => $entryDatetime,
+                '3' => $booking->vox_dynamic_link ?? $booking->audio_guide_url ?? $onlineGuideUrl,
+                '4' => $knowBeforeYouGoUrl,
+            ];
+        } else {
+            // ticket_only template: customer_name, entry_datetime, online_guide_url, know_before_you_go_url
+            return [
+                '1' => $booking->customer_name ?? 'Guest',
+                '2' => $entryDatetime,
+                '3' => $onlineGuideUrl,
+                '4' => $knowBeforeYouGoUrl,
+            ];
+        }
+    }
+
+    /**
+     * Send WhatsApp message using Content Templates
      */
     public function sendWhatsApp(
         Booking $booking,
@@ -110,14 +169,29 @@ class TwilioService
         }
 
         $phone = $this->formatPhoneNumber($booking->customer_phone);
+        $language = $template->language ?? 'en';
+        $hasAudioGuide = $booking->has_audio_guide;
+
+        // Get Content Template SID
+        $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide);
+
+        if (!$contentSid) {
+            throw new \RuntimeException("No WhatsApp Content Template found for language: {$language}");
+        }
+
+        // Build template variables
+        $contentVariables = $this->buildTemplateVariables($booking, $hasAudioGuide);
+
+        // Also get rendered content for logging/display (use old template for now)
         $variables = $booking->getTemplateVariables();
+        $renderedContent = $template->render($variables);
 
         // Create message record
         $message = Message::create([
             'booking_id' => $booking->id,
             'channel' => Message::CHANNEL_WHATSAPP,
             'recipient' => $phone,
-            'content' => $template->render($variables),
+            'content' => $renderedContent,
             'template_id' => $template->id,
             'template_variables' => $variables,
             'status' => Message::STATUS_PENDING,
@@ -144,12 +218,14 @@ class TwilioService
                 }
             }
 
-            // Build message options
+            // Build message options using Content Template
             $options = [
                 'from' => "whatsapp:{$this->whatsappFrom}",
-                'body' => $message->content,
+                'contentSid' => $contentSid,
+                'contentVariables' => json_encode($contentVariables),
             ];
 
+            // Add media URLs if we have attachments
             if (!empty($mediaUrls)) {
                 $options['mediaUrl'] = $mediaUrls;
             }
@@ -158,6 +234,16 @@ class TwilioService
             if (config('services.twilio.status_callback_url')) {
                 $options['statusCallback'] = config('services.twilio.status_callback_url');
             }
+
+            Log::info('Sending WhatsApp with Content Template', [
+                'booking_id' => $booking->id,
+                'phone' => $phone,
+                'content_sid' => $contentSid,
+                'language' => $language,
+                'has_audio_guide' => $hasAudioGuide,
+                'variables' => $contentVariables,
+                'media_count' => count($mediaUrls),
+            ]);
 
             // Send via Twilio
             $twilioMessage = $client->messages->create(
@@ -182,6 +268,7 @@ class TwilioService
             Log::error('Failed to send WhatsApp', [
                 'booking_id' => $booking->id,
                 'phone' => $phone,
+                'content_sid' => $contentSid,
                 'error' => $e->getMessage(),
             ]);
 
@@ -335,17 +422,26 @@ class TwilioService
 
     /**
      * Preview WhatsApp message without sending
+     * Returns preview with Content Template variables
      */
     public function previewWhatsApp(
         Booking $booking,
         MessageTemplate $template
     ): array {
         $variables = $booking->getTemplateVariables();
+        $hasAudioGuide = $booking->has_audio_guide;
+        $language = $template->language ?? 'en';
+
+        // Get the content template SID and variables for reference
+        $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide);
+        $contentVariables = $this->buildTemplateVariables($booking, $hasAudioGuide);
 
         return [
             'content' => $template->render($variables),
             'recipient' => $this->formatPhoneNumber($booking->customer_phone ?? ''),
             'channel' => 'whatsapp',
+            'content_template_sid' => $contentSid,
+            'content_variables' => $contentVariables,
         ];
     }
 
@@ -389,6 +485,7 @@ class TwilioService
             $client = $this->getClient();
 
             // Build message options based on channel
+            // Note: Replies within 24-hour window can use free-form body (no template required)
             if ($conversation->channel === Conversation::CHANNEL_WHATSAPP) {
                 $options = [
                     'from' => "whatsapp:{$this->whatsappFrom}",

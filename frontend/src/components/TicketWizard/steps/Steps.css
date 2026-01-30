@@ -1,0 +1,283 @@
+/* =====================================================
+   Ticket Wizard Steps - Shared Styles
+   ===================================================== */
+
+/* Audio Guide Step Styles */
+.step-audio-guide .audio-info-card {
+  background: var(--gray-50, #f9fafb);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.step-audio-guide .info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.step-audio-guide .info-row:last-child {
+  border-bottom: none;
+}
+
+.step-audio-guide .info-row .label {
+  color: var(--gray-600, #4b5563);
+  font-size: 0.875rem;
+}
+
+.step-audio-guide .info-row .value {
+  font-weight: 600;
+  color: var(--gray-900, #111827);
+}
+
+/* Success Card */
+.step-audio-guide .audio-success-card {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.step-audio-guide .success-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.step-audio-guide .success-icon {
+  width: 40px;
+  height: 40px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.step-audio-guide .success-header h4 {
+  color: #047857;
+  margin: 0 0 0.25rem 0;
+  font-size: 1.125rem;
+}
+
+.step-audio-guide .success-header p {
+  color: #065f46;
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* Credentials Section */
+.step-audio-guide .credentials-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.step-audio-guide .credential-item {
+  margin-bottom: 0.75rem;
+}
+
+.step-audio-guide .credential-item:last-child {
+  margin-bottom: 0;
+}
+
+.step-audio-guide .credential-item label {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--gray-600, #4b5563);
+  margin-bottom: 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.step-audio-guide .credential-value {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.step-audio-guide .credential-value code {
+  flex: 1;
+  background: var(--gray-100, #f3f4f6);
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  word-break: break-all;
+  font-family: ui-monospace, monospace;
+}
+
+.step-audio-guide .copy-btn {
+  padding: 0.5rem 0.75rem;
+  background: var(--primary-500, #3b82f6);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.step-audio-guide .copy-btn:hover {
+  background: var(--primary-600, #2563eb);
+}
+
+/* Info Note */
+.step-audio-guide .audio-info-note {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  font-size: 0.875rem;
+}
+
+.step-audio-guide .audio-info-note strong {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--gray-700, #374151);
+}
+
+.step-audio-guide .audio-info-note ol {
+  margin: 0;
+  padding-left: 1.25rem;
+  color: var(--gray-600, #4b5563);
+}
+
+.step-audio-guide .audio-info-note li {
+  margin: 0.25rem 0;
+}
+
+/* Generate Card */
+.step-audio-guide .audio-generate-card {
+  background: var(--gray-50, #f9fafb);
+  border: 2px dashed var(--gray-300, #d1d5db);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.step-audio-guide .generate-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  color: var(--primary-500, #3b82f6);
+}
+
+.step-audio-guide .generate-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.step-audio-guide .audio-generate-card h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--gray-900, #111827);
+}
+
+.step-audio-guide .audio-generate-card > p {
+  color: var(--gray-600, #4b5563);
+  margin: 0 0 1.5rem 0;
+}
+
+.step-audio-guide .generate-btn {
+  background: linear-gradient(135deg, var(--primary-500, #3b82f6) 0%, var(--primary-600, #2563eb) 100%);
+  color: white;
+  border: none;
+  padding: 0.875rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 200px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.step-audio-guide .generate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.step-audio-guide .generate-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.step-audio-guide .btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.step-audio-guide .generate-hint {
+  color: var(--gray-500, #6b7280);
+  font-size: 0.8125rem;
+  margin: 1rem 0 0 0;
+}
+
+/* Error Message */
+.step-audio-guide .audio-error-message {
+  background: #fef2f2;
+  color: #b91c1c;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+  text-align: left;
+}
+
+/* =====================================================
+   Preview Step - Audio Guide Section
+   ===================================================== */
+
+.audio-guide-preview {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.audio-guide-preview h4 {
+  margin: 0 0 0.75rem 0;
+  color: #1e40af;
+  font-size: 0.875rem;
+}
+
+.audio-guide-preview .audio-guide-info {
+  font-size: 0.875rem;
+  color: #1e3a8a;
+}
+
+.audio-guide-preview .audio-guide-info p {
+  margin: 0 0 0.5rem 0;
+}
+
+.audio-guide-preview .audio-guide-info code {
+  display: block;
+  background: white;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  word-break: break-all;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125rem;
+}

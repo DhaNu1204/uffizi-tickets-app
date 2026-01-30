@@ -156,4 +156,39 @@ class AttachmentController extends Controller
             'error' => 'Download not supported for local storage',
         ], 501);
     }
+
+    /**
+     * Get temporary download URL for attachment (alias for download)
+     * GET /api/attachments/{id}/download-link
+     *
+     * Returns a pre-signed S3 URL valid for 60 minutes
+     */
+    public function getDownloadLink(int $id): JsonResponse
+    {
+        $attachment = MessageAttachment::findOrFail($id);
+
+        if (!$attachment->exists()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'File not found on storage',
+            ], 404);
+        }
+
+        // Generate pre-signed URL valid for 1 hour
+        $url = $attachment->getTemporaryUrl(60); // 60 minutes
+
+        if (!$url) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not generate download URL for this storage type',
+            ], 501);
+        }
+
+        return response()->json([
+            'success' => true,
+            'download_url' => $url,
+            'filename' => $attachment->original_name,
+            'expires_in' => '60 minutes',
+        ]);
+    }
 }
