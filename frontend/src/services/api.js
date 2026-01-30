@@ -207,4 +207,19 @@ export const conversationsAPI = {
   unreadCount: () => api.get('/conversations/unread-count'),
 };
 
+// Monitoring endpoints (Delivery tracking)
+export const monitoringAPI = {
+  // Get delivery statistics
+  deliveryStats: (period = '7d') => api.get('/monitoring/delivery-stats', { params: { period } }),
+
+  // Get failed messages list
+  failedMessages: (params = {}) => api.get('/monitoring/failed-messages', { params }),
+
+  // Get channel health status
+  channelHealth: () => api.get('/monitoring/channel-health'),
+
+  // Get daily summary
+  dailySummary: () => api.get('/monitoring/daily-summary'),
+};
+
 export default api;

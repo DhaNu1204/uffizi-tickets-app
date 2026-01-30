@@ -12,6 +12,7 @@ use App\Http\Controllers\AttachmentController;
 use App\Http\Controllers\TemplateAdminController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\MonitoringController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,6 +125,14 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     Route::put('/conversations/{id}/read', [ConversationController::class, 'markRead']);
     Route::put('/conversations/{id}/booking', [ConversationController::class, 'linkBooking']);
     Route::delete('/conversations/{id}', [ConversationController::class, 'archive']);
+
+    // Monitoring Routes (Delivery tracking and alerts)
+    Route::prefix('monitoring')->group(function () {
+        Route::get('/delivery-stats', [MonitoringController::class, 'deliveryStats']);
+        Route::get('/failed-messages', [MonitoringController::class, 'failedMessages']);
+        Route::get('/channel-health', [MonitoringController::class, 'channelHealth']);
+        Route::get('/daily-summary', [MonitoringController::class, 'dailySummary']);
+    });
 });
 
 /*
