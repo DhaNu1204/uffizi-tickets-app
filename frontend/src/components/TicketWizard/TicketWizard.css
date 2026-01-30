@@ -1188,3 +1188,354 @@
   font-size: 14px;
   color: #6b7280;
 }
+
+/* ===========================================
+   MOBILE RESPONSIVE STYLES
+   =========================================== */
+
+@media (max-width: 768px) {
+  /* Full screen modal on mobile */
+  .ticket-wizard-overlay {
+    padding: 0;
+    align-items: flex-end;
+  }
+
+  .ticket-wizard {
+    max-width: 100%;
+    max-height: 95vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  /* Compact header */
+  .wizard-header {
+    padding: 16px 20px;
+  }
+
+  .wizard-header h2 {
+    font-size: 16px;
+  }
+
+  /* Smaller close button with good touch target */
+  .wizard-close {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: -8px -12px -8px 0;
+  }
+
+  /* Compact progress bar */
+  .wizard-progress {
+    padding: 16px 12px;
+    gap: 2px;
+  }
+
+  .step-indicator {
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+  }
+
+  .step-connector {
+    width: 16px;
+    margin: 0 2px;
+  }
+
+  .check-icon {
+    width: 12px;
+    height: 12px;
+  }
+
+  /* Content area */
+  .wizard-content {
+    padding: 20px 16px;
+  }
+
+  .wizard-step-content h3 {
+    font-size: 16px;
+  }
+
+  .step-description {
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+
+  /* Navigation buttons */
+  .wizard-navigation {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .nav-left, .nav-right {
+    flex: none;
+  }
+
+  .nav-center {
+    order: 3;
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .btn-send {
+    padding: 12px 20px;
+  }
+
+  /* Booking details card */
+  .booking-details-card {
+    padding: 12px;
+  }
+
+  .detail-row {
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 0;
+  }
+
+  .detail-row.highlight {
+    padding: 10px 12px;
+    margin: 0 -12px;
+  }
+
+  .detail-label {
+    font-size: 12px;
+  }
+
+  .detail-value {
+    font-size: 14px;
+  }
+
+  /* Form inputs */
+  .form-input {
+    font-size: 16px; /* Prevents iOS zoom */
+    padding: 12px 14px;
+    min-height: 48px;
+  }
+
+  .input-with-validation .form-input {
+    padding-right: 44px;
+  }
+
+  .input-icon {
+    right: 14px;
+    width: 22px;
+    height: 22px;
+  }
+
+  /* Code format hint */
+  .code-format-hint {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .format-char {
+    width: 28px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  /* Audio guide section */
+  .audio-guide-section {
+    padding: 14px;
+  }
+
+  /* File upload */
+  .upload-area {
+    padding: 24px 16px;
+  }
+
+  .upload-area p {
+    font-size: 14px;
+  }
+
+  .upload-area small {
+    font-size: 12px;
+  }
+
+  /* File list */
+  .file-item {
+    padding: 10px;
+  }
+
+  .file-info .file-name {
+    font-size: 13px;
+  }
+
+  .file-info .file-size {
+    font-size: 11px;
+  }
+
+  /* Language selector */
+  .language-options {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .language-option {
+    padding: 14px 16px;
+  }
+
+  .lang-name {
+    font-size: 15px;
+  }
+
+  .lang-native {
+    font-size: 13px;
+  }
+
+  /* Template selector */
+  .template-options {
+    gap: 10px;
+  }
+
+  .template-option {
+    padding: 14px;
+  }
+
+  /* Preview section */
+  .preview-section {
+    padding: 12px;
+  }
+
+  .preview-header {
+    padding: 12px 14px;
+  }
+
+  .preview-content {
+    padding: 14px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* Channel indicator */
+  .channel-indicator {
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px;
+  }
+
+  .channel-info {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+
+  .channel-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .channel-details {
+    text-align: center;
+  }
+
+  /* Success/Error states */
+  .success-content, .error-content {
+    padding: 24px 16px;
+  }
+
+  .success-icon, .error-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .success-content h3, .error-content h3 {
+    font-size: 18px;
+  }
+
+  .success-content p, .error-content p {
+    font-size: 14px;
+  }
+
+  /* Delivery details */
+  .delivery-details {
+    padding: 14px;
+  }
+
+  .delivery-details .row {
+    padding: 8px 0;
+    font-size: 14px;
+  }
+
+  /* Message status */
+  .message-status {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .message-status .recipient {
+    width: 100%;
+    text-align: left;
+    font-size: 12px;
+  }
+
+  /* Next steps */
+  .next-steps, .error-details, .retry-instructions {
+    padding: 14px;
+    margin-top: 20px;
+  }
+
+  .next-steps h4, .error-details h4 {
+    font-size: 14px;
+  }
+
+  .next-steps ul, .error-details ul {
+    font-size: 13px;
+    padding-left: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  /* Even more compact on small screens */
+  .ticket-wizard {
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  .wizard-content {
+    padding: 16px 12px;
+  }
+
+  .wizard-navigation {
+    padding: 10px 12px;
+  }
+
+  /* Stack buttons vertically */
+  .wizard-navigation .nav-left,
+  .wizard-navigation .nav-right {
+    width: 100%;
+  }
+
+  .wizard-navigation .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .wizard-navigation .nav-left {
+    order: 2;
+  }
+
+  .wizard-navigation .nav-right {
+    order: 1;
+    margin-bottom: 8px;
+  }
+
+  /* Smaller progress indicators */
+  .step-indicator {
+    width: 22px;
+    height: 22px;
+    font-size: 10px;
+  }
+
+  .step-connector {
+    width: 12px;
+  }
+}
