@@ -1,4 +1,5 @@
 import axios from 'axios';
+import * as Sentry from '@sentry/react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -22,15 +23,51 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Handle 401 responses
+// Handle responses and track errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status;
+
+    // Handle 401 - redirect to login
+    if (status === 401) {
       localStorage.removeItem('auth_token');
       localStorage.removeItem('user');
       window.location.href = '/login';
+      return Promise.reject(error);
     }
+
+    // Track API errors in Sentry (5xx errors and network failures)
+    if (status >= 500 || !error.response) {
+      Sentry.captureException(error, {
+        tags: {
+          api_error: true,
+          status_code: status || 'network_error',
+          endpoint: error.config?.url || 'unknown',
+          method: error.config?.method?.toUpperCase() || 'unknown',
+        },
+        extra: {
+          request_url: error.config?.url,
+          request_method: error.config?.method,
+          response_status: status,
+          response_data: error.response?.data,
+        },
+      });
+    }
+
+    // Add breadcrumb for all API errors (helps debugging)
+    if (status >= 400) {
+      Sentry.addBreadcrumb({
+        category: 'api',
+        message: `API Error: ${error.config?.method?.toUpperCase()} ${error.config?.url}`,
+        level: status >= 500 ? 'error' : 'warning',
+        data: {
+          status,
+          error: error.response?.data?.error || error.message,
+        },
+      });
+    }
+
     return Promise.reject(error);
   }
 );
