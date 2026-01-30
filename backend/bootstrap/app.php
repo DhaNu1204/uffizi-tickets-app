@@ -8,6 +8,7 @@ use Illuminate\Auth\AuthenticationException;
 use Illuminate\Http\Request;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\RequestLogger;
+use App\Http\Middleware\PerformanceMonitor;
 use Sentry\Laravel\Integration;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -27,6 +28,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // Logs request method, path, client IP, response status, and duration
         // Only logs when APP_DEBUG=true or for specific routes (webhooks, sync)
         $middleware->appendToGroup('api', RequestLogger::class);
+
+        // Add performance monitoring middleware
+        // Tracks response times, logs slow requests, and collects metrics
+        $middleware->appendToGroup('api', PerformanceMonitor::class);
 
         // Note: Do NOT use statefulApi() - we use token-based auth, not cookie-based
         // statefulApi() enables CSRF protection which breaks token auth from same-origin requests

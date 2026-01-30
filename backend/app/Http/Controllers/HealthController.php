@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Middleware\PerformanceMonitor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Health Check Controller
  *
- * Provides API health check endpoints for monitoring system status.
+ * Provides API health check endpoints for monitoring system status
+ * and performance metrics.
  */
 class HealthController extends Controller
 {
@@ -139,5 +141,105 @@ class HealthController extends Controller
                 'message' => 'Cache not working',
             ];
         }
+    }
+
+    /**
+     * Performance metrics endpoint.
+     *
+     * GET /api/health/performance
+     *
+     * Returns:
+     * - Average response times
+     * - Slow request count and percentage
+     * - Top slowest endpoints
+     * - Database query time
+     * - Memory usage
+     *
+     * @return JsonResponse
+     */
+    public function performance(): JsonResponse
+    {
+        // Get API performance metrics
+        $metrics = PerformanceMonitor::getMetrics();
+
+        // Get current database latency
+        $dbLatency = $this->measureDatabaseLatency();
+
+        // Get memory usage
+        $memoryUsage = [
+            'current_mb' => round(memory_get_usage(true) / 1024 / 1024, 2),
+            'peak_mb' => round(memory_get_peak_usage(true) / 1024 / 1024, 2),
+        ];
+
+        // Get external API status (if configured)
+        $externalApis = $this->checkExternalApis();
+
+        return response()->json([
+            'status' => 'ok',
+            'timestamp' => now()->toIso8601String(),
+            'api_metrics' => $metrics,
+            'database' => [
+                'latency_ms' => $dbLatency,
+                'status' => $dbLatency < 100 ? 'healthy' : ($dbLatency < 500 ? 'slow' : 'critical'),
+            ],
+            'memory' => $memoryUsage,
+            'external_apis' => $externalApis,
+            'thresholds' => [
+                'slow_response_ms' => (int) env('SLOW_RESPONSE_THRESHOLD_MS', 2000),
+                'slow_query_ms' => (int) env('SLOW_QUERY_THRESHOLD_MS', 500),
+            ],
+        ]);
+    }
+
+    /**
+     * Measure database latency.
+     *
+     * @return float
+     */
+    private function measureDatabaseLatency(): float
+    {
+        try {
+            $start = microtime(true);
+            DB::select('SELECT 1');
+            return round((microtime(true) - $start) * 1000, 2);
+        } catch (\Exception $e) {
+            return -1;
+        }
+    }
+
+    /**
+     * Check external API connectivity.
+     *
+     * @return array
+     */
+    private function checkExternalApis(): array
+    {
+        $apis = [];
+
+        // Check Twilio (if configured)
+        if (config('services.twilio.account_sid')) {
+            $apis['twilio'] = [
+                'configured' => true,
+                'status' => 'configured', // We don't ping Twilio to avoid rate limits
+            ];
+        }
+
+        // Check AWS S3 (if configured)
+        if (config('services.aws.bucket')) {
+            $apis['aws_s3'] = [
+                'configured' => true,
+                'bucket' => config('services.aws.bucket'),
+            ];
+        }
+
+        // Check Bokun (if configured)
+        if (config('services.bokun.access_key')) {
+            $apis['bokun'] = [
+                'configured' => true,
+                'status' => 'configured',
+            ];
+        }
+
+        return $apis;
     }
 }

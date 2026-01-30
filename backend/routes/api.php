@@ -22,6 +22,7 @@ use App\Http\Controllers\ConversationController;
 // Health check endpoints - no authentication required for monitoring
 Route::get('/health', [HealthController::class, 'check']);
 Route::get('/health/detailed', [HealthController::class, 'detailed']);
+Route::get('/health/performance', [HealthController::class, 'performance']);
 
 // Webhook endpoint - verified via HMAC signature, not Sanctum
 Route::post('/webhook/bokun', [BookingController::class, 'handleWebhook']);
