@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import api from '../services/api';
 import './MessageHistory.css';
 
 export default function MessageHistory() {
+  const navigate = useNavigate();
   const { error: showError } = useToast();
   const [messages, setMessages] = useState([]);
   const [stats, setStats] = useState(null);
@@ -95,6 +97,14 @@ export default function MessageHistory() {
   return (
     <div className="message-history-page">
       <div className="page-header">
+        <div className="page-header-top">
+          <button className="btn-back" onClick={() => navigate('/')}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            Back to Menu
+          </button>
+        </div>
         <h1>Message History</h1>
         <p>View all sent messages and their delivery status</p>
       </div>

@@ -8,6 +8,35 @@
   margin-bottom: 24px;
 }
 
+.page-header-top {
+  margin-bottom: 16px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-back:hover {
+  background: #e9ecef;
+  border-color: #ccc;
+}
+
+.btn-back svg {
+  width: 18px;
+  height: 18px;
+}
+
 .page-header h1 {
   margin: 0 0 8px 0;
   font-size: 24px;
