@@ -469,3 +469,138 @@
   flex-shrink: 0;
   color: #10b981;
 }
+
+/* =====================================================
+   Preview Step - Message Preview Styles (Enhanced)
+   ===================================================== */
+
+.step-preview .message-preview {
+  background: var(--gray-50, #f9fafb);
+  border: 1px solid var(--gray-200, #e5e7eb);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.step-preview .message-preview h4 {
+  margin: 0 0 1rem 0;
+  font-size: 0.9375rem;
+  color: var(--gray-700, #374151);
+}
+
+.step-preview .message-preview.whatsapp {
+  background: linear-gradient(135deg, #dcf8c6 0%, #e8f5e1 100%);
+  border: 1px solid #a7d38a;
+}
+
+.step-preview .message-preview.whatsapp h4 {
+  color: #075e54;
+}
+
+.step-preview .message-preview.email {
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  border: 1px solid #64b5f6;
+}
+
+.step-preview .message-preview.email h4 {
+  color: #1565c0;
+}
+
+.step-preview .message-preview.sms {
+  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  border: 1px solid #ffb74d;
+}
+
+.step-preview .message-preview.sms h4 {
+  color: #e65100;
+}
+
+.step-preview .message-preview.fallback {
+  margin-top: 0.75rem;
+}
+
+.step-preview .message-preview .preview-subject {
+  background: white;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.step-preview .message-preview .preview-content {
+  background: white;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+}
+
+.step-preview .message-preview .preview-content pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: inherit;
+}
+
+.step-preview .message-preview.whatsapp .preview-content {
+  border-radius: 0 12px 12px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.step-preview .message-preview .preview-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: white;
+  border-radius: 8px;
+  margin-top: 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--gray-600, #4b5563);
+}
+
+.step-preview .message-preview .preview-attachment .pdf-icon {
+  font-size: 1.25rem;
+}
+
+.step-preview .message-preview .preview-recipient {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 0.8125rem;
+  color: var(--gray-600, #4b5563);
+}
+
+/* WhatsApp Badge Style */
+.step-preview .channel-badge.whatsapp-badge {
+  background: linear-gradient(135deg, #25d366 0%, #128c7e 100%);
+  color: white;
+}
+
+.step-preview .channel-badge.whatsapp-badge .channel-icon {
+  color: white;
+}
+
+/* Confirm Box */
+.step-preview .confirm-box {
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+  text-align: center;
+}
+
+.step-preview .confirm-box strong {
+  display: block;
+  color: #047857;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.step-preview .confirm-box p {
+  margin: 0;
+  color: #065f46;
+  font-size: 0.875rem;
+}
