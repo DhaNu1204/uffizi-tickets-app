@@ -1,7 +1,30 @@
 import { formatDate, formatTime } from '../../../utils/dateUtils';
 
+/**
+ * Parse pax_details which may come as string, array, or object
+ */
+function parsePaxDetails(paxDetails) {
+  if (!paxDetails) return null;
+
+  // If it's already an object/array, return as-is
+  if (typeof paxDetails === 'object') return paxDetails;
+
+  // If it's a string, try to parse it
+  if (typeof paxDetails === 'string') {
+    try {
+      return JSON.parse(paxDetails);
+    } catch (e) {
+      console.warn('Failed to parse pax_details:', paxDetails);
+      return null;
+    }
+  }
+
+  return null;
+}
+
 export default function Step1BookingDetails({ booking }) {
   const tourDate = new Date(booking.tour_date);
+  const paxDetails = parsePaxDetails(booking.pax_details);
 
   return (
     <div className="wizard-step-content step-booking-details">
@@ -56,19 +79,19 @@ export default function Step1BookingDetails({ booking }) {
           <span className="detail-value">{booking.pax}</span>
         </div>
 
-        {booking.pax_details && (
-          Array.isArray(booking.pax_details) ? booking.pax_details.length > 0 : Object.keys(booking.pax_details).length > 0
+        {paxDetails && (
+          Array.isArray(paxDetails) ? paxDetails.length > 0 : Object.keys(paxDetails).length > 0
         ) && (
           <div className="detail-row">
             <span className="detail-label">PAX Details</span>
             <span className="detail-value pax-details">
-              {Array.isArray(booking.pax_details)
-                ? booking.pax_details.map((item, idx) => (
+              {Array.isArray(paxDetails)
+                ? paxDetails.map((item, idx) => (
                     <span key={idx} className="pax-item">
-                      {item.quantity}x {item.type}
+                      {item.quantity || item.count || 1}x {item.type || item.name || 'Guest'}
                     </span>
                   ))
-                : Object.entries(booking.pax_details).map(([type, count]) => (
+                : Object.entries(paxDetails).map(([type, count]) => (
                     <span key={type} className="pax-item">
                       {count}x {type}
                     </span>

@@ -942,51 +942,84 @@ protected function formatPhoneNumber(string $phone): string
 }
 ```
 
-## Sending WhatsApp
+## WhatsApp Content Templates
+
+WhatsApp messages use **Twilio Content Templates** with dynamic variables. Templates are configured in `config/whatsapp_templates.php`.
+
+### Template Types
+
+| Type | Description | Variables |
+|------|-------------|-----------|
+| `ticket_pdf` | Ticket without audio guide | {{1}}-{{5}} |
+| `ticket_audio_pdf` | Ticket with audio guide | {{1}}-{{5}} |
+
+### Template Variables
+
+```
+{{1}} - Customer name
+{{2}} - Entry date/time (e.g., "February 1, 2026 at 10:00 AM")
+{{3}} - Online guide URL or PopGuide dynamic link
+{{4}} - Know before you go URL
+{{5}} - PDF attachment URL (MUST be publicly accessible)
+```
+
+### CRITICAL: Dynamic Media URL
+
+Templates MUST have `{{5}}` as dynamic media URL in Twilio Console:
+```json
+// CORRECT - Dynamic URL
+"media": ["{{5}}"]
+
+// WRONG - Hardcoded URL (will ignore contentVariables)
+"media": ["https://bucket.s3.amazonaws.com/static-file.pdf"]
+```
+
+### Sending WhatsApp with Content Templates
 
 ```php
 public function sendWhatsApp(Booking $booking, MessageTemplate $template, array $attachments = []): Message
 {
     $phone = $this->formatPhoneNumber($booking->customer_phone);
-    $variables = $booking->getTemplateVariables();
+    $language = $template->language ?? 'en';
+    $hasAudioGuide = $booking->has_audio_guide;
 
-    $message = Message::create([
-        'booking_id' => $booking->id,
-        'channel' => Message::CHANNEL_WHATSAPP,
-        'recipient' => $phone,
-        'content' => $template->render($variables),
-        'status' => Message::STATUS_PENDING,
+    // Generate PDF URL from attachment
+    $pdfUrl = null;
+    if (!empty($attachments)) {
+        $firstAttachment = reset($attachments);
+        $pdfUrl = $firstAttachment->getTemporaryUrl(); // 7-day presigned URL
+    }
+
+    // Get Content Template SID
+    $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide, !empty($pdfUrl));
+
+    // Build template variables
+    $contentVariables = [
+        '1' => $booking->customer_name ?? 'Guest',
+        '2' => $booking->tour_date->format('F j, Y') . ' at 10:00 AM',
+        '3' => $hasAudioGuide ? $booking->vox_dynamic_link : 'https://uffizi.florencewithlocals.com',
+        '4' => 'https://uffizi.florencewithlocals.com/know-before-you-go',
+        '5' => $pdfUrl, // PDF attachment URL
+    ];
+
+    // Send via Twilio Content API
+    $twilioMessage = $client->messages->create("whatsapp:{$phone}", [
+        'from' => "whatsapp:{$this->whatsappFrom}",
+        'contentSid' => $contentSid,
+        'contentVariables' => json_encode($contentVariables),
     ]);
 
-    try {
-        $message->markQueued();
-
-        $mediaUrls = [];
-        foreach ($attachments as $attachment) {
-            $url = $attachment->getTemporaryUrl();
-            if ($url) $mediaUrls[] = $url;
-        }
-
-        $options = [
-            'from' => "whatsapp:{$this->whatsappFrom}",
-            'body' => $message->content,
-        ];
-        if (!empty($mediaUrls)) $options['mediaUrl'] = $mediaUrls;
-        if (config('services.twilio.status_callback_url')) {
-            $options['statusCallback'] = config('services.twilio.status_callback_url');
-        }
-
-        $twilioMessage = $this->getClient()->messages->create("whatsapp:{$phone}", $options);
-        $message->markSent($twilioMessage->sid);
-
-        return $message;
-
-    } catch (TwilioException $e) {
-        $message->markFailed($e->getMessage());
-        throw $e;
-    }
+    return $message;
 }
 ```
+
+### Troubleshooting Error 63021
+
+Error 63021 "Channel invalid content error" usually means:
+1. Template SID is invalid or not approved
+2. Template has hardcoded media URL instead of `{{5}}`
+3. PDF URL is not publicly accessible
+4. Variables don't match template placeholders
 
 ## Status Callback Handling
 
@@ -1019,6 +1052,8 @@ public function handleStatusCallback(array $data): void
 
 ## Template Variables
 
+### Email/SMS Templates (Blade-style)
+
 ```php
 // Available in Booking::getTemplateVariables()
 [
@@ -1036,6 +1071,19 @@ public function handleStatusCallback(array $data): void
 
 // Template example:
 // "Hello {{customer_name}}, your tickets for {{product_name}} on {{tour_date}} at {{tour_time}} are attached."
+```
+
+### WhatsApp Content Templates (Twilio-style)
+
+```php
+// Built via TwilioService::buildTemplateVariables()
+[
+    '1' => 'John Doe',           // customer_name
+    '2' => 'January 25, 2026 at 10:00 AM',  // entry_datetime
+    '3' => 'https://...',        // online_guide_url or vox_dynamic_link
+    '4' => 'https://...',        // know_before_you_go_url
+    '5' => 'https://...',        // pdf_url (S3 presigned or local signed URL)
+]
 ```
 
 ---
@@ -1238,6 +1286,10 @@ VITE_API_URL=https://uffizi.deetech.cc/api
 5. **Cache invalidation** - Clear stats cache after booking updates
 6. **OTA bookings** - May have limited/no contact information
 7. **Media URLs** - Must be publicly accessible for WhatsApp (use pre-signed S3 URLs)
+8. **WhatsApp Content Templates** - Templates MUST use `{{5}}` for dynamic PDF URL, not hardcoded URLs
+9. **Error 63021** - Usually means template has hardcoded media URL or is not approved
+10. **pax_details JSON** - May come as string from API; frontend must parse with `JSON.parse()`
+11. **S3 vs Local storage** - Check `config('services.aws.bucket')` to determine disk; local files use signed URLs via `/api/public/attachments/{id}/{signature}`
 
 ---
 
