@@ -3,24 +3,21 @@
 /**
  * WhatsApp Template Configuration
  *
- * Maps language codes and template categories to Twilio WhatsApp Template SIDs.
+ * Maps language codes and template categories to Twilio WhatsApp Content Template SIDs.
  *
- * NEW: Media Templates with PDF Attachment Support (5 variables)
- *
- * Template Categories:
- * - ticket_pdf: Ticket delivery WITH PDF attachment (no audio guide)
- * - ticket_audio_pdf: Ticket + Audio Guide WITH PDF attachment
+ * IMPORTANT: All templates use dynamic {{5}} variable for PDF attachment URL.
+ * Templates with hardcoded media URLs will cause Error 63021.
  *
  * Template Variables (5 variables per template):
  *   - {{1}} - Customer name
  *   - {{2}} - Entry date/time
  *   - {{3}} - Online guide URL OR PopGuide dynamic link
  *   - {{4}} - Know before you go URL
- *   - {{5}} - PDF attachment URL (S3 pre-signed)
+ *   - {{5}} - PDF attachment URL (dynamically generated presigned URL)
  *
  * To add new templates:
  * 1. Create the template in Twilio Console > Messaging > Content Templates
- * 2. Use twilio/media type with document support
+ * 2. Use twilio/media type with "media": ["{{5}}"] for dynamic PDF
  * 3. Wait for approval (usually 24-48 hours)
  * 4. Copy the SID (starts with HX) and add it here
  */
@@ -32,20 +29,20 @@ return [
     |--------------------------------------------------------------------------
     |
     | Media templates for ticket delivery with PDF attachment.
-    | Variables: customer_name, entry_datetime, online_guide_url, know_before_you_go_url, pdf_url
+    | Uses dynamic {{5}} variable for PDF URL.
     |
     */
     'ticket_pdf' => [
-        'en' => 'HX50c5e100ce4cff2beaa057009519b8b3', // English
-        'it' => 'HX872e1d78862eb97fef19aabccee263d8', // Italian
-        'es' => 'HX3ee1bc0213734477615f55b67b2b45b0', // Spanish
-        'de' => 'HX146a3dfb60ec1c3be7d42eb3290e8717', // German
-        'fr' => 'HXa17ba29e85eb203a43217bd71016aa9f', // French
-        'pt' => 'HXfe93a29b5c5e3270a6c8bcb58871f11e', // Portuguese
-        'ja' => 'HX33465712878170c6eb099be38e61649d', // Japanese
-        'ko' => 'HX949fc8e553c3a058aafd4d1fe40ed115', // Korean
-        'el' => 'HX96de0b3000ac39c91e129718b45cfe91', // Greek
-        'tr' => 'HX6d0291b3b7448548947ad45a5eac4c1a', // Turkish
+        'en' => 'HXe99a2433d4e53e42ac5dca877eaa8851', // English
+        'it' => 'HX7d35de5a55faa43e826a807e687c1216', // Italian
+        'es' => 'HXaca15d24845e4e4115dda3d5886f69ba', // Spanish
+        'de' => 'HX268847fee98cf54bdd967c68a0be803e', // German
+        'fr' => 'HX731940512951f890852567eaa8e2e0cd', // French
+        'pt' => 'HXb4dbb32e5d61194832541afe9b2a0b16', // Portuguese
+        'ja' => 'HX1eaab455cc7a45ab0d9079bdf4db7e97', // Japanese
+        'ko' => 'HX1e748c4e5cf7694fca60f28501cb2524', // Korean
+        'el' => 'HX16926a51c9005942b3567a0399fbbd81', // Greek
+        'tr' => 'HX2c99778da63646e17b2ee6013c4b9b87', // Turkish
     ],
 
     /*
@@ -54,59 +51,25 @@ return [
     |--------------------------------------------------------------------------
     |
     | Media templates for ticket delivery with PDF attachment AND PopGuide link.
-    | Variables: customer_name, entry_datetime, popguide_dynamic_link, know_before_you_go_url, pdf_url
+    | Uses dynamic {{5}} variable for PDF URL.
     |
     */
     'ticket_audio_pdf' => [
-        'en' => 'HXf89e9f799de533ef61a58b1c78979a6c', // English
-        'it' => 'HX96970f78810c1f3470d790b8bdf46aaf', // Italian
-        'es' => 'HXf517172c0d730a3fba87165b75f6e848', // Spanish
-        'de' => 'HXed77ab79d1e10decd9625ebe2ecaebac', // German
-        'fr' => 'HX388e5dde667434358daa6dc22c6c8469', // French
-        'pt' => 'HX5aa16df8dee24ab2015db38e0c5b6ded', // Portuguese
-        'ja' => 'HXdd62d4f98f9886fba026120920ba362b', // Japanese
-        'ko' => 'HX864751c0a0cbc34010d60995cb9ccd69', // Korean
-        'el' => 'HX9072a0440c4f1ffaf0fdf4787df30ac5', // Greek
-        'tr' => 'HX992ce5239bf554785005a787a0f29df2', // Turkish
+        'en' => 'HXf5b8d9920da797efa1ad6f8233844aa6', // English
+        'it' => 'HXa4d47e4cf311042f2fa36b861c0566e4', // Italian
+        'es' => 'HXe44f4e61a6bf8faa37426c21b164638f', // Spanish
+        'de' => 'HX750bc9155367db86cf9b80c11f3fe9cf', // German
+        'fr' => 'HXa6b3a703fcf66a2dd0c7275b857e7246', // French
+        'pt' => 'HX4023b025f1dcc29aa17b67c00e27ca1d', // Portuguese
+        'ja' => 'HXdb1df50f0968503361b3420e52453740f', // Japanese
+        'ko' => 'HXf9c9afdacd5910172982c8458578f90b', // Korean
+        'el' => 'HX4fd89046ab200f48789292a5b7ea180d', // Greek
+        'tr' => 'HX38ffd19576bd5741507c890582f1242b', // Turkish
     ],
 
     /*
     |--------------------------------------------------------------------------
-    | Legacy Templates (4 variables) - Text Only, No PDF
-    |--------------------------------------------------------------------------
-    |
-    | Kept for backwards compatibility. Use ticket_pdf and ticket_audio_pdf instead.
-    |
-    */
-    'ticket_only' => [
-        'en' => 'HX903d5ba5ab918c0a41f0a0613054adc9',
-        'it' => 'HX2cafa5bc1638c752068bf00337053e41',
-        'es' => 'HX988cc9aa1ee651995af8dce063090ec6',
-        'de' => 'HX229c90f27b1d67de43aea14cf488a096',
-        'fr' => 'HXa72416c623ca61249b2884c34513db4e',
-        'pt' => 'HX9feb703a1f16c64c9dfa728ba581774b',
-        'ja' => 'HX0c7c5aa6f2aba9e5a3d13fab995be8b3',
-        'ko' => 'HX6bbf78e995af1befeda1e2b75d0f7ce4',
-        'el' => 'HX267374e3b7f0c88af864e375bf9398bf',
-        'tr' => 'HX40a4a3a8cd873302a670edd736109df5',
-    ],
-
-    'ticket_with_audio' => [
-        'en' => 'HXfcf3f39931f3399ffb6667295fa94afc',
-        'it' => 'HX6c41442e3d4248fc20aae6f6f703d42d',
-        'es' => 'HX237b81b830cb65cdb3dfe3a39654bdff',
-        'de' => 'HX68e5c508e0e1afe6138f22ab5d3623de',
-        'fr' => 'HXd3979b260b6809a7f0b2b23dfe790e53',
-        'pt' => 'HX004c38cd334f1c70496f14cded00265d',
-        'ja' => 'HXae0e21e13999f699d06dbb185b2df3ea',
-        'ko' => 'HX52f0c3ccf448561c51f15332d8ac9134',
-        'el' => 'HX41ef2aada9ab5a020e4243dd997f6fb3',
-        'tr' => 'HX28976f52c12b6f0d2964403231e8cf8b',
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Default URLs
+    | Default URLs (Static - NOT used for PDF attachments)
     |--------------------------------------------------------------------------
     */
     'urls' => [
@@ -119,12 +82,12 @@ return [
     | PDF URL Settings
     |--------------------------------------------------------------------------
     |
-    | PDF URLs must remain valid long enough for customers to access tickets.
-    | NOTE: AWS S3 SigV4 pre-signed URLs have a MAXIMUM of 7 days.
-    | For longer access, customers can request a new link via WhatsApp.
+    | PDF URLs are generated dynamically via getTemporaryUrl().
+    | For S3: presigned URLs with max 7 days expiry (AWS SigV4 limit)
+    | For local: signed URLs via /api/public/attachments/{id}/{signature}
     |
     */
-    'pdf_url_expiry_days' => 7, // Maximum allowed by AWS S3 SigV4
+    'pdf_url_expiry_days' => 7,
 
     /*
     |--------------------------------------------------------------------------
