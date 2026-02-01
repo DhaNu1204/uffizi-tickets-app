@@ -101,12 +101,36 @@ export default function Step5Preview({ booking, wizardData, isLoading }) {
         )}
       </div>
 
-      {/* Attachments Summary */}
+      {/* Attachments Summary - Show detailed info to prevent wrong PDF */}
       <div className="attachments-summary">
-        <h4>Attachments</h4>
-        <div className="attachment-count">
-          {attachments.length} PDF file{attachments.length !== 1 ? 's' : ''} attached
+        <h4>📎 Attachments for Booking #{booking.id}</h4>
+        <div className="attachments-list">
+          {attachments.map((att) => (
+            <div key={att.id} className="attachment-item-preview">
+              <div className="attachment-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+              </div>
+              <div className="attachment-details">
+                <span className="attachment-name">{att.original_name}</span>
+                <span className="attachment-meta">
+                  {(att.size / 1024).toFixed(1)} KB • Booking #{booking.id}
+                </span>
+              </div>
+              <div className="attachment-check">✓</div>
+            </div>
+          ))}
         </div>
+        {booking.reference_number && !attachments.some(a =>
+          a.original_name?.toLowerCase().includes(booking.reference_number?.toLowerCase())
+        ) && (
+          <div className="attachment-warning">
+            ⚠️ Filename does not contain reference "{booking.reference_number}".
+            Please verify this is the correct ticket.
+          </div>
+        )}
       </div>
 
       {/* Audio Guide Section */}

@@ -102,6 +102,31 @@ class MessageController extends Controller
             ], 422);
         }
 
+        // CRITICAL: Verify all attachments belong to THIS booking
+        $validAttachments = \App\Models\MessageAttachment::whereIn('id', $attachmentIds)
+            ->where('booking_id', $booking->id)
+            ->get();
+
+        if ($validAttachments->count() !== count($attachmentIds)) {
+            $invalidIds = array_diff($attachmentIds, $validAttachments->pluck('id')->toArray());
+            Log::error('SECURITY: Attachment mismatch - possible wrong PDF!', [
+                'booking_id' => $id,
+                'requested_ids' => $attachmentIds,
+                'valid_ids' => $validAttachments->pluck('id')->toArray(),
+                'invalid_ids' => $invalidIds,
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'One or more attachments do not belong to this booking. Please re-upload the correct PDF.',
+            ], 422);
+        }
+
+        Log::info('Attachment validation passed', [
+            'booking_id' => $id,
+            'valid_attachment_ids' => $validAttachments->pluck('id')->toArray(),
+            'filenames' => $validAttachments->pluck('original_name')->toArray(),
+        ]);
+
         try {
             $result = $this->messagingService->sendTicket($booking, $language, $attachmentIds, $customMessage);
 

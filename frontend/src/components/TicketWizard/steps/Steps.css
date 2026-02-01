@@ -318,3 +318,154 @@
 .step-preview .pdf-note span {
   line-height: 1.4;
 }
+
+/* =====================================================
+   Preview Step - Attachments Summary (Enhanced)
+   ===================================================== */
+
+.step-preview .attachments-summary {
+  background: var(--gray-50, #f9fafb);
+  border: 1px solid var(--gray-200, #e5e7eb);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.step-preview .attachments-summary h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: var(--gray-700, #374151);
+}
+
+.step-preview .attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.step-preview .attachment-item-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200, #e5e7eb);
+}
+
+.step-preview .attachment-item-preview .attachment-icon {
+  width: 32px;
+  height: 32px;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.step-preview .attachment-item-preview .attachment-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.step-preview .attachment-item-preview .attachment-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-preview .attachment-item-preview .attachment-name {
+  display: block;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--gray-900, #111827);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-preview .attachment-item-preview .attachment-meta {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--gray-500, #6b7280);
+  margin-top: 0.125rem;
+}
+
+.step-preview .attachment-item-preview .attachment-check {
+  width: 24px;
+  height: 24px;
+  background: #10b981;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.875rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.step-preview .attachment-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  margin-top: 0.75rem;
+  border: 1px solid #fcd34d;
+}
+
+/* =====================================================
+   File Attach Step - Enhanced Verification
+   ===================================================== */
+
+.step-file-attach .file-booking {
+  display: block;
+  font-size: 0.6875rem;
+  color: var(--primary-500, #3b82f6);
+  margin-top: 0.125rem;
+  font-weight: 500;
+}
+
+.step-file-attach .file-reference-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.875rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  margin-top: 1rem;
+  border: 1px solid #fcd34d;
+}
+
+.step-file-attach .file-reference-warning svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  color: #d97706;
+}
+
+.step-file-attach .file-reference-warning span {
+  line-height: 1.5;
+}
+
+.step-file-attach .upload-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ecfdf5;
+  color: #047857;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  margin-top: 1rem;
+  border: 1px solid #a7f3d0;
+}
+
+.step-file-attach .upload-confirmation svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: #10b981;
+}

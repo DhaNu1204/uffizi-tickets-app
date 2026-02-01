@@ -55,7 +55,7 @@ class MessagingService
             return $results;
         }
 
-        // Load attachments
+        // Load attachments - CRITICAL: Filter by booking_id to prevent wrong PDF bug
         $attachments = MessageAttachment::whereIn('id', $attachmentIds)
             ->where('booking_id', $booking->id)
             ->get();
@@ -65,7 +65,30 @@ class MessagingService
             'requested_ids' => $attachmentIds,
             'loaded_count' => $attachments->count(),
             'loaded_ids' => $attachments->pluck('id')->toArray(),
+            'filenames' => $attachments->pluck('original_name')->toArray(),
         ]);
+
+        // CRITICAL: Validate all requested attachments were found for this booking
+        if ($attachments->count() !== count($attachmentIds)) {
+            $invalidIds = array_diff($attachmentIds, $attachments->pluck('id')->toArray());
+            Log::error('CRITICAL: Attachment mismatch - some attachments do not belong to this booking!', [
+                'booking_id' => $booking->id,
+                'requested_ids' => $attachmentIds,
+                'found_ids' => $attachments->pluck('id')->toArray(),
+                'invalid_ids' => $invalidIds,
+            ]);
+            $results['errors'][] = 'Attachment does not belong to this booking. Please re-upload the correct PDF.';
+            return $results;
+        }
+
+        if ($attachments->isEmpty()) {
+            Log::error('No valid attachments found for booking', [
+                'booking_id' => $booking->id,
+                'requested_ids' => $attachmentIds,
+            ]);
+            $results['errors'][] = 'No valid attachments found for this booking.';
+            return $results;
+        }
 
         // Determine which channel to use
         $hasPhone = !empty($booking->customer_phone);

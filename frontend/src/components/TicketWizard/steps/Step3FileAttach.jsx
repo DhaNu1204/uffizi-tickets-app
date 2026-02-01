@@ -153,6 +153,7 @@ export default function Step3FileAttach({ booking, attachments, onChange }) {
                 <div className="file-info">
                   <span className="file-name">{file.original_name}</span>
                   <span className="file-size">{formatFileSize(file.size)}</span>
+                  <span className="file-booking">Booking #{booking.id}</span>
                 </div>
                 <button
                   type="button"
@@ -168,6 +169,35 @@ export default function Step3FileAttach({ booking, attachments, onChange }) {
               </li>
             ))}
           </ul>
+
+          {/* Warning if filename doesn't contain reference number */}
+          {booking.reference_number && attachments.some(file =>
+            !file.original_name?.toLowerCase().includes(booking.reference_number?.toLowerCase())
+          ) && (
+            <div className="file-reference-warning">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <span>
+                Filename does not contain reference "{booking.reference_number}".
+                Please verify this is the correct ticket for this booking.
+              </span>
+            </div>
+          )}
+
+          {/* Success confirmation */}
+          <div className="upload-confirmation">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+              <polyline points="22 4 12 14.01 9 11.01" />
+            </svg>
+            <span>
+              {attachments.length} file{attachments.length !== 1 ? 's' : ''} uploaded for Booking #{booking.id}
+              {booking.reference_number && ` (Ref: ${booking.reference_number})`}
+            </span>
+          </div>
         </div>
       )}
     </div>
