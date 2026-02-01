@@ -60,6 +60,13 @@ class MessagingService
             ->where('booking_id', $booking->id)
             ->get();
 
+        Log::info('=== MESSAGING SERVICE: ATTACHMENTS LOADED ===', [
+            'booking_id' => $booking->id,
+            'requested_ids' => $attachmentIds,
+            'loaded_count' => $attachments->count(),
+            'loaded_ids' => $attachments->pluck('id')->toArray(),
+        ]);
+
         // Determine which channel to use
         $hasPhone = !empty($booking->customer_phone);
         $hasEmail = !empty($booking->customer_email);
@@ -81,7 +88,7 @@ class MessagingService
 
         // Send based on channel availability
         if ($hasPhone && $hasWhatsApp) {
-            // WhatsApp available - use WhatsApp only
+            // WhatsApp available - use WhatsApp with PDF attachment
             $results['channel_used'] = 'whatsapp';
 
             try {
@@ -96,11 +103,32 @@ class MessagingService
                 } else {
                     $template = $this->getTemplate('whatsapp', $language, $booking->has_audio_guide);
                 }
+
+                Log::info('=== SENDING WHATSAPP WITH PDF ===', [
+                    'booking_id' => $booking->id,
+                    'template_id' => $template->id ?? 'dynamic',
+                    'language' => $language,
+                    'has_audio_guide' => $booking->has_audio_guide,
+                    'attachments_count' => $attachments->count(),
+                    'attachment_ids' => $attachments->pluck('id')->toArray(),
+                ]);
+
+                // Send WhatsApp message with PDF attachment (new media templates)
                 $message = $this->twilioService->sendWhatsApp($booking, $template, $attachments->all());
                 $results['messages'][] = $message;
                 $results['success'] = true;
+
+                Log::info('WhatsApp with PDF sent successfully', [
+                    'booking_id' => $booking->id,
+                    'message_id' => $message->id,
+                ]);
+
             } catch (\Exception $e) {
                 $results['errors'][] = "WhatsApp failed: {$e->getMessage()}";
+                Log::error('WhatsApp send failed', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
         } elseif ($hasEmail) {
@@ -210,8 +238,9 @@ class MessagingService
         if ($hasPhone && $hasWhatsApp) {
             return [
                 'primary' => 'whatsapp',
-                'fallback' => null,
-                'description' => 'Will send via WhatsApp',
+                'fallback' => $hasEmail ? 'email' : null,
+                'description' => 'Will send via WhatsApp with PDF attachment',
+                'pdf_supported' => true,
             ];
         }
 

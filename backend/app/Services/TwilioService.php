@@ -102,11 +102,19 @@ class TwilioService
      *
      * @param string $language Language code (en, it, es, etc.)
      * @param bool $hasAudioGuide Whether booking includes audio guide
+     * @param bool $hasPdfAttachment Whether to use PDF-enabled template
      * @return string|null Content Template SID or null if not found
      */
-    public function getWhatsAppTemplateSid(string $language, bool $hasAudioGuide): ?string
+    public function getWhatsAppTemplateSid(string $language, bool $hasAudioGuide, bool $hasPdfAttachment = true): ?string
     {
-        $templateType = $hasAudioGuide ? 'ticket_with_audio' : 'ticket_only';
+        // Use new PDF-enabled templates by default
+        if ($hasPdfAttachment) {
+            $templateType = $hasAudioGuide ? 'ticket_audio_pdf' : 'ticket_pdf';
+        } else {
+            // Legacy text-only templates
+            $templateType = $hasAudioGuide ? 'ticket_with_audio' : 'ticket_only';
+        }
+
         $templates = config("whatsapp_templates.{$templateType}", []);
 
         // Try requested language
@@ -124,9 +132,10 @@ class TwilioService
      *
      * @param Booking $booking The booking to build variables for
      * @param bool $hasAudioGuide Whether to include audio guide link
+     * @param string|null $pdfUrl Pre-signed S3 URL for PDF attachment
      * @return array Variables in Twilio format ['1' => 'value', '2' => 'value', ...]
      */
-    public function buildTemplateVariables(Booking $booking, bool $hasAudioGuide): array
+    public function buildTemplateVariables(Booking $booking, bool $hasAudioGuide, ?string $pdfUrl = null): array
     {
         // Format entry datetime (e.g., "January 30, 2026 at 10:00 AM")
         $entryDatetime = $booking->tour_date
@@ -137,27 +146,28 @@ class TwilioService
         $onlineGuideUrl = config('whatsapp_templates.urls.online_guide', 'https://uffizi.florencewithlocals.com');
         $knowBeforeYouGoUrl = config('whatsapp_templates.urls.know_before_you_go', 'https://florencewithlocals.com/uffizi-know-before-you-go');
 
-        if ($hasAudioGuide) {
-            // ticket_with_audio template: customer_name, entry_datetime, popguide_dynamic_link, know_before_you_go_url
-            return [
-                '1' => $booking->customer_name ?? 'Guest',
-                '2' => $entryDatetime,
-                '3' => $booking->vox_dynamic_link ?? $booking->audio_guide_url ?? $onlineGuideUrl,
-                '4' => $knowBeforeYouGoUrl,
-            ];
-        } else {
-            // ticket_only template: customer_name, entry_datetime, online_guide_url, know_before_you_go_url
-            return [
-                '1' => $booking->customer_name ?? 'Guest',
-                '2' => $entryDatetime,
-                '3' => $onlineGuideUrl,
-                '4' => $knowBeforeYouGoUrl,
-            ];
+        // Base variables (1-4)
+        $variables = [
+            '1' => $booking->customer_name ?? 'Guest',
+            '2' => $entryDatetime,
+            '3' => $hasAudioGuide
+                ? ($booking->vox_dynamic_link ?? $booking->audio_guide_url ?? $onlineGuideUrl)
+                : $onlineGuideUrl,
+            '4' => $knowBeforeYouGoUrl,
+        ];
+
+        // Add PDF URL as variable 5 if provided (for new media templates)
+        if ($pdfUrl) {
+            $variables['5'] = $pdfUrl;
         }
+
+        return $variables;
     }
 
     /**
-     * Send WhatsApp message using Content Templates
+     * Send WhatsApp message using Content Templates with PDF attachment
+     *
+     * Uses new media templates that support PDF attachments via variable {{5}}
      */
     public function sendWhatsApp(
         Booking $booking,
@@ -172,17 +182,39 @@ class TwilioService
         $language = $template->language ?? 'en';
         $hasAudioGuide = $booking->has_audio_guide;
 
-        // Get Content Template SID
-        $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide);
+        // Generate PDF URL from first attachment (14-day expiry from config)
+        $pdfUrl = null;
+        $hasPdfAttachment = !empty($attachments);
+
+        if ($hasPdfAttachment) {
+            $firstAttachment = reset($attachments);
+            if ($firstAttachment instanceof MessageAttachment) {
+                // Uses 14-day default from config (whatsapp_templates.pdf_url_expiry_days)
+                $pdfUrl = $firstAttachment->getTemporaryUrl();
+
+                if (!$pdfUrl) {
+                    Log::warning('Failed to generate PDF URL for WhatsApp', [
+                        'attachment_id' => $firstAttachment->id,
+                        'disk' => $firstAttachment->disk,
+                        'path' => $firstAttachment->path,
+                    ]);
+                    // Fall back to non-PDF template
+                    $hasPdfAttachment = false;
+                }
+            }
+        }
+
+        // Get Content Template SID (PDF-enabled or legacy based on attachment)
+        $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide, $hasPdfAttachment);
 
         if (!$contentSid) {
             throw new \RuntimeException("No WhatsApp Content Template found for language: {$language}");
         }
 
-        // Build template variables
-        $contentVariables = $this->buildTemplateVariables($booking, $hasAudioGuide);
+        // Build template variables (includes PDF URL as {{5}} if available)
+        $contentVariables = $this->buildTemplateVariables($booking, $hasAudioGuide, $pdfUrl);
 
-        // Also get rendered content for logging/display (use old template for now)
+        // Get rendered content for logging/display
         $variables = $booking->getTemplateVariables();
         $renderedContent = $template->render($variables);
 
@@ -197,52 +229,44 @@ class TwilioService
             'status' => Message::STATUS_PENDING,
         ]);
 
-        // Associate attachments
+        // Associate attachments with message
         foreach ($attachments as $attachment) {
             if ($attachment instanceof MessageAttachment) {
                 $attachment->update(['message_id' => $message->id]);
             }
         }
 
+        Log::info('WhatsApp message prepared', [
+            'booking_id' => $booking->id,
+            'attachments_count' => count($attachments),
+            'has_pdf_url' => !empty($pdfUrl),
+            'template_type' => $hasPdfAttachment ? 'media_with_pdf' : 'text_only',
+        ]);
+
         try {
             $message->markQueued();
 
             $client = $this->getClient();
 
-            // Prepare media URLs for attachments
-            $mediaUrls = [];
-            foreach ($message->attachments as $attachment) {
-                $url = $attachment->getTemporaryUrl();
-                if ($url) {
-                    $mediaUrls[] = $url;
-                }
-            }
-
-            // Build message options using Content Template
             $options = [
                 'from' => "whatsapp:{$this->whatsappFrom}",
                 'contentSid' => $contentSid,
                 'contentVariables' => json_encode($contentVariables),
             ];
 
-            // Add media URLs if we have attachments
-            if (!empty($mediaUrls)) {
-                $options['mediaUrl'] = $mediaUrls;
-            }
-
             // Add status callback
             if (config('services.twilio.status_callback_url')) {
                 $options['statusCallback'] = config('services.twilio.status_callback_url');
             }
 
-            Log::info('Sending WhatsApp with Content Template', [
+            Log::info('Sending WhatsApp with Media Template', [
                 'booking_id' => $booking->id,
                 'phone' => $phone,
                 'content_sid' => $contentSid,
                 'language' => $language,
                 'has_audio_guide' => $hasAudioGuide,
-                'variables' => $contentVariables,
-                'media_count' => count($mediaUrls),
+                'has_pdf_attachment' => $hasPdfAttachment,
+                'pdf_url_preview' => $pdfUrl ? substr($pdfUrl, 0, 80) . '...' : null,
             ]);
 
             // Send via Twilio
@@ -253,11 +277,12 @@ class TwilioService
 
             $message->markSent($twilioMessage->sid);
 
-            Log::info('WhatsApp sent successfully', [
+            Log::info('WhatsApp sent successfully with PDF', [
                 'booking_id' => $booking->id,
                 'phone' => $phone,
                 'message_id' => $message->id,
                 'twilio_sid' => $twilioMessage->sid,
+                'pdf_included' => $hasPdfAttachment,
             ]);
 
             return $message;

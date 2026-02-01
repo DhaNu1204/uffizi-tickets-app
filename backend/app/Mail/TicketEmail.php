@@ -70,12 +70,19 @@ class TicketEmail extends Mailable
 
         foreach ($this->emailAttachments as $file) {
             if (isset($file['path']) && isset($file['disk'])) {
-                $disk = Storage::disk($file['disk']);
+                $diskName = $file['disk'];
+                $disk = Storage::disk($diskName);
 
                 if ($disk->exists($file['path'])) {
-                    $attachments[] = Attachment::fromStorage($file['path'])
+                    // Use fromStorageDisk to specify the correct disk (s3 or local)
+                    $attachments[] = Attachment::fromStorageDisk($diskName, $file['path'])
                         ->as($file['name'] ?? basename($file['path']))
                         ->withMime($file['mime'] ?? 'application/pdf');
+                } else {
+                    \Illuminate\Support\Facades\Log::warning('Email attachment file not found', [
+                        'disk' => $diskName,
+                        'path' => $file['path'],
+                    ]);
                 }
             }
         }

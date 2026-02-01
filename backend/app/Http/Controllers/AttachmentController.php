@@ -38,14 +38,36 @@ class AttachmentController extends Controller
         $storedName = Str::uuid() . '.pdf';
         $path = "attachments/{$booking->id}/{$storedName}";
 
-        // Determine which disk to use
-        $disk = config('filesystems.default', 'local');
-        if (config('services.aws.bucket')) {
+        // Determine which disk to use - prefer S3 if configured
+        $disk = 'local';
+        $awsBucket = config('services.aws.bucket');
+        if (!empty($awsBucket)) {
             $disk = 's3';
         }
 
+        \Illuminate\Support\Facades\Log::info('Uploading attachment', [
+            'booking_id' => $booking->id,
+            'original_name' => $file->getClientOriginalName(),
+            'disk' => $disk,
+            'path' => $path,
+            'aws_bucket_configured' => !empty($awsBucket),
+        ]);
+
         // Store the file
-        Storage::disk($disk)->put($path, file_get_contents($file->getRealPath()));
+        $stored = Storage::disk($disk)->put($path, file_get_contents($file->getRealPath()));
+
+        if (!$stored) {
+            \Illuminate\Support\Facades\Log::error('Failed to store attachment', [
+                'booking_id' => $booking->id,
+                'disk' => $disk,
+                'path' => $path,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Failed to store file',
+            ], 500);
+        }
 
         // Create attachment record
         $attachment = MessageAttachment::create([
@@ -56,6 +78,13 @@ class AttachmentController extends Controller
             'path' => $path,
             'mime_type' => $file->getMimeType(),
             'size' => $file->getSize(),
+        ]);
+
+        \Illuminate\Support\Facades\Log::info('Attachment created', [
+            'attachment_id' => $attachment->id,
+            'booking_id' => $booking->id,
+            'disk' => $disk,
+            'path' => $path,
         ]);
 
         return response()->json([
@@ -190,5 +219,45 @@ class AttachmentController extends Controller
             'filename' => $attachment->original_name,
             'expires_in' => '60 minutes',
         ]);
+    }
+
+    /**
+     * Serve a local attachment file (PUBLIC route for Twilio media access)
+     * GET /api/public/attachments/{id}/{signature}
+     *
+     * This is a PUBLIC route that uses a signed URL for security.
+     * Twilio needs to access attachment files without authentication.
+     */
+    public function servePublic(Request $request, int $id, string $signature)
+    {
+        // Verify the signature
+        $attachment = MessageAttachment::find($id);
+
+        if (!$attachment) {
+            abort(404, 'Attachment not found');
+        }
+
+        // Verify the signature matches
+        $expectedSignature = MessageAttachment::generateSignature($id);
+        if (!hash_equals($expectedSignature, $signature)) {
+            abort(403, 'Invalid signature');
+        }
+
+        // Check if file exists
+        if (!$attachment->exists()) {
+            abort(404, 'File not found');
+        }
+
+        // Get file contents
+        $contents = $attachment->getContents();
+        if (!$contents) {
+            abort(404, 'Could not read file');
+        }
+
+        // Return file response
+        return response($contents)
+            ->header('Content-Type', $attachment->mime_type)
+            ->header('Content-Disposition', 'inline; filename="' . $attachment->original_name . '"')
+            ->header('Cache-Control', 'public, max-age=3600');
     }
 }

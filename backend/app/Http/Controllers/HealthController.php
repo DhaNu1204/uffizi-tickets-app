@@ -92,11 +92,30 @@ class HealthController extends Controller
     }
 
     /**
-     * Check storage accessibility.
+     * Check storage accessibility (local and S3).
      *
      * @return array
      */
     private function checkStorage(): array
+    {
+        $result = [
+            'local' => $this->checkLocalStorage(),
+            's3' => $this->checkS3Storage(),
+        ];
+
+        $allOk = $result['local']['status'] === 'ok' &&
+                 ($result['s3']['status'] === 'ok' || $result['s3']['status'] === 'not_configured');
+
+        return [
+            'status' => $allOk ? 'ok' : 'error',
+            'details' => $result,
+        ];
+    }
+
+    /**
+     * Check local storage accessibility.
+     */
+    private function checkLocalStorage(): array
     {
         try {
             $testFile = storage_path('app/.health-check');
@@ -112,7 +131,50 @@ class HealthController extends Controller
         } catch (\Exception $e) {
             return [
                 'status' => 'error',
-                'message' => 'Storage not writable',
+                'message' => 'Local storage not writable',
+            ];
+        }
+    }
+
+    /**
+     * Check S3 storage accessibility.
+     */
+    private function checkS3Storage(): array
+    {
+        $bucket = config('services.aws.bucket');
+
+        if (empty($bucket)) {
+            return [
+                'status' => 'not_configured',
+                'message' => 'AWS_BUCKET not set - files stored locally',
+            ];
+        }
+
+        try {
+            $disk = \Illuminate\Support\Facades\Storage::disk('s3');
+            $testPath = 'health-check/test-' . time() . '.txt';
+
+            // Write test file
+            $disk->put($testPath, 'health-check');
+
+            // Verify it exists
+            if (!$disk->exists($testPath)) {
+                throw new \Exception('S3 write succeeded but file not found');
+            }
+
+            // Clean up
+            $disk->delete($testPath);
+
+            return [
+                'status' => 'ok',
+                'bucket' => $bucket,
+                'region' => config('services.aws.region'),
+            ];
+        } catch (\Exception $e) {
+            return [
+                'status' => 'error',
+                'bucket' => $bucket,
+                'message' => $e->getMessage(),
             ];
         }
     }
