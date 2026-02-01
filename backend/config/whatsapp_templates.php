@@ -61,7 +61,7 @@ return [
         'de' => 'HX750bc9155367db86cf9b80c11f3fe9cf', // German
         'fr' => 'HXa6b3a703fcf66a2dd0c7275b857e7246', // French
         'pt' => 'HX4023b025f1dcc29aa17b67c00e27ca1d', // Portuguese
-        'ja' => 'HXdb1df50f0968503361b3420e52453740f', // Japanese
+        'ja' => 'HXdb1df50f096850361b3420e52453740f', // Japanese (FIXED - was HXdb1df50f0968503361b3420e52453740f)
         'ko' => 'HXf9c9afdacd5910172982c8458578f90b', // Korean
         'el' => 'HX4fd89046ab200f48789292a5b7ea180d', // Greek
         'tr' => 'HX38ffd19576bd5741507c890582f1242b', // Turkish
