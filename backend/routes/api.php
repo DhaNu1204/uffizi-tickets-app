@@ -14,6 +14,7 @@ use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\VoxController;
+use App\Http\Controllers\MessageHistoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,6 +100,12 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Manual Message History & Status Sync
     Route::get('/messages/manual-history', [ManualMessageController::class, 'history']);
     Route::post('/messages/sync-status', [ManualMessageController::class, 'syncStatus']);
+
+    // Message History Routes (all messages)
+    Route::get('/messages/all', [MessageHistoryController::class, 'index']);
+    Route::get('/messages/stats', [MessageHistoryController::class, 'stats']);
+    Route::get('/messages/{id}/details', [MessageHistoryController::class, 'show']);
+    Route::post('/messages/{id}/retry', [MessageHistoryController::class, 'retry']);
 
     // Attachment Routes
     Route::post('/bookings/{id}/attachments', [AttachmentController::class, 'store']);

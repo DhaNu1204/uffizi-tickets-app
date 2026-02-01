@@ -11,6 +11,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'));
 const WebhookLogs = lazy(() => import('./pages/WebhookLogs'));
 const TemplateAdmin = lazy(() => import('./pages/TemplateAdmin'));
 const ConversationsPage = lazy(() => import('./pages/ConversationsPage'));
+const MessageHistory = lazy(() => import('./pages/MessageHistory'));
 
 // Loading fallback component
 const PageLoader = () => (
@@ -111,6 +112,16 @@ function App() {
                 <ProtectedRoute>
                   <Suspense fallback={<PageLoader />}>
                     <ConversationsPage />
+                  </Suspense>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/messages"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={<PageLoader />}>
+                    <MessageHistory />
                   </Suspense>
                 </ProtectedRoute>
               }

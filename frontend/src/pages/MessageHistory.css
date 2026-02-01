@@ -1,0 +1,349 @@
+.message-history-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  color: #1a1a2e;
+}
+
+.page-header p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Stats Cards */
+.stats-cards {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  min-width: 140px;
+  border-left: 4px solid #6c757d;
+}
+
+.stat-card.success {
+  border-left-color: #28a745;
+}
+
+.stat-card.danger {
+  border-left-color: #dc3545;
+}
+
+.stat-card.whatsapp {
+  border-left-color: #25D366;
+}
+
+.stat-card.email {
+  border-left-color: #0078D4;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1a1a2e;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #666;
+  text-transform: uppercase;
+  margin-top: 8px;
+  letter-spacing: 0.5px;
+}
+
+/* Filters */
+.filters-section {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 280px;
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.filters-section select {
+  padding: 12px 16px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  min-width: 150px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.btn-search {
+  padding: 12px 24px;
+  background: #4a6cf7;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-search:hover {
+  background: #3a5ce5;
+}
+
+/* Table */
+.messages-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  overflow-x: auto;
+}
+
+.messages-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.messages-table th,
+.messages-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.messages-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+.messages-table tbody tr {
+  transition: background 0.15s;
+}
+
+.messages-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.messages-table tbody tr.row-failed {
+  background: #fff5f5;
+}
+
+.messages-table tbody tr.row-failed:hover {
+  background: #ffecec;
+}
+
+.date-cell {
+  font-size: 13px;
+  color: #555;
+  white-space: nowrap;
+}
+
+.recipient-cell {
+  font-family: monospace;
+  font-size: 13px;
+}
+
+/* Channel Badge */
+.channel-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.channel-badge.channel-whatsapp {
+  background: #dcf8c6;
+  color: #075e54;
+}
+
+.channel-badge.channel-email {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.channel-badge.channel-sms {
+  background: #fff3e0;
+  color: #e65100;
+}
+
+/* Status Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.badge-success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.badge-warning {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-danger {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.badge-info {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.badge-primary {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.badge-secondary {
+  background: #e2e3e5;
+  color: #383d41;
+}
+
+/* SID */
+.sid {
+  font-size: 11px;
+  background: #f1f3f4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #555;
+}
+
+/* Error Message */
+.error-message {
+  font-size: 12px;
+  color: #dc3545;
+  cursor: help;
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text-muted {
+  color: #999;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 24px;
+}
+
+.pagination button {
+  padding: 10px 20px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.pagination button:hover:not(:disabled) {
+  background: #f8f9fa;
+  border-color: #bbb;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: #666;
+  font-size: 14px;
+}
+
+/* Loading & Empty States */
+.loading,
+.no-messages {
+  padding: 60px 40px;
+  text-align: center;
+  color: #666;
+  font-size: 15px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .message-history-page {
+    padding: 16px;
+  }
+
+  .stats-cards {
+    gap: 12px;
+  }
+
+  .stat-card {
+    min-width: calc(50% - 6px);
+    padding: 16px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .filters-section {
+    flex-direction: column;
+  }
+
+  .search-input {
+    min-width: 100%;
+  }
+
+  .filters-section select {
+    width: 100%;
+  }
+
+  .messages-table th,
+  .messages-table td {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
