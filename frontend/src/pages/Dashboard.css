@@ -533,6 +533,46 @@
   background: linear-gradient(to right, var(--warning-50, #fffbeb), transparent);
 }
 
+/* Refreshing state - subtle indicator without unmounting content */
+.day-group.refreshing {
+  position: relative;
+}
+
+.refresh-indicator {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-light, #e5e7eb);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--text-secondary, #6b7280);
+  box-shadow: var(--shadow-sm, 0 1px 3px rgb(0 0 0 / 0.1));
+  z-index: 10;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.refresh-indicator .spinner.small {
+  width: 12px;
+  height: 12px;
+  border-width: 2px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .day-header {
   display: flex;
   align-items: center;

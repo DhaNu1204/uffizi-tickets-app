@@ -89,6 +89,16 @@ export default function Step5Preview({ booking, wizardData, isLoading }) {
           )}
         </div>
         <p className="channel-description">{channelInfo?.description}</p>
+        {channelInfo?.pdf_note && (
+          <div className={`pdf-note ${channelInfo.pdf_note.includes('Warning') ? 'warning' : 'info'}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="note-icon">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="16" x2="12" y2="12" />
+              <line x1="12" y1="8" x2="12.01" y2="8" />
+            </svg>
+            <span>{channelInfo.pdf_note}</span>
+          </div>
+        )}
       </div>
 
       {/* Attachments Summary */}

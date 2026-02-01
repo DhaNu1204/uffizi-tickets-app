@@ -15,6 +15,7 @@ const Dashboard = () => {
   const [groupedBookings, setGroupedBookings] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false); // For background refreshes that shouldn't unmount children
   const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -209,8 +210,14 @@ const Dashboard = () => {
     setSelectedDate(newDate);
   };
 
-  const fetchBookings = useCallback(async () => {
-    setLoading(true);
+  const fetchBookings = useCallback(async (showFullLoading = false) => {
+    // Only show full loading state when explicitly requested (initial load)
+    // This prevents BookingTable from unmounting during background refreshes
+    if (showFullLoading) {
+      setLoading(true);
+    } else {
+      setRefreshing(true);
+    }
     try {
       const params = Object.fromEntries(
         Object.entries(filters).filter(([_, v]) => v !== '')
@@ -223,6 +230,7 @@ const Dashboard = () => {
       setError('Failed to load bookings');
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filters]);
 
@@ -270,20 +278,29 @@ const Dashboard = () => {
           console.log(`Auto-sync completed. ${pending_participants} bookings still need participant data.`);
         }
 
-        fetchBookings();
+        // Don't pass isInitialLoad=true here - let the other useEffect handle initial load
+        // This is a background refresh after auto-sync
+        fetchBookings(false);
         fetchStats();
       } catch (err) {
         console.error('Auto-sync error:', err);
-        fetchBookings();
+        fetchBookings(false);
         fetchStats();
       }
     };
 
     syncOnLoad();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Track if this is the first load
+  const hasLoadedOnce = useRef(false);
+
   useEffect(() => {
-    fetchBookings();
+    // Show full loading only on very first load
+    const showFullLoading = !hasLoadedOnce.current;
+    fetchBookings(showFullLoading);
+    hasLoadedOnce.current = true;
   }, [fetchBookings]);
 
   useEffect(() => {
@@ -771,7 +788,13 @@ const Dashboard = () => {
 
             {/* Bookings for Selected Day */}
             {!loading && selectedDayBookings && (
-              <div className={`day-group ${isToday(selectedDate) ? 'today' : ''}`}>
+              <div className={`day-group ${isToday(selectedDate) ? 'today' : ''} ${refreshing ? 'refreshing' : ''}`}>
+                {refreshing && (
+                  <div className="refresh-indicator">
+                    <span className="spinner small"></span>
+                    <span>Updating...</span>
+                  </div>
+                )}
                 <BookingTable
                   bookings={selectedDayBookings.bookings}
                   onUpdate={handleUpdateBooking}

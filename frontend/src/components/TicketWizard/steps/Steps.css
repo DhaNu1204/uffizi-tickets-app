@@ -281,3 +281,40 @@
   font-family: ui-monospace, monospace;
   font-size: 0.8125rem;
 }
+
+/* =====================================================
+   Preview Step - PDF Note
+   ===================================================== */
+
+.step-preview .pdf-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  margin-top: 0.75rem;
+}
+
+.step-preview .pdf-note.info {
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.step-preview .pdf-note.warning {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fcd34d;
+}
+
+.step-preview .pdf-note .note-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-preview .pdf-note span {
+  line-height: 1.4;
+}

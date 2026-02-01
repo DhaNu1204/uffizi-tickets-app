@@ -24,10 +24,16 @@ class MessageController extends Controller
      */
     public function sendTicket(Request $request, int $id): JsonResponse
     {
+        Log::info('sendTicket called', [
+            'booking_id' => $id,
+            'request_data' => $request->all(),
+        ]);
+
         $booking = Booking::findOrFail($id);
 
         // Validate booking is for Timed Entry only
         if (!$booking->isTimedEntry()) {
+            Log::warning('sendTicket 422: Not timed entry', ['booking_id' => $id, 'product_id' => $booking->bokun_product_id]);
             return response()->json([
                 'success' => false,
                 'error' => 'Ticket sending is only available for Timed Entry tickets',
@@ -36,6 +42,7 @@ class MessageController extends Controller
 
         // Validate booking has reference number
         if (!$booking->reference_number) {
+            Log::warning('sendTicket 422: No reference number', ['booking_id' => $id]);
             return response()->json([
                 'success' => false,
                 'error' => 'Booking must have a ticket reference number before sending',
@@ -45,6 +52,7 @@ class MessageController extends Controller
         // Validate audio guide credentials if booking has audio guide
         if ($booking->has_audio_guide) {
             if (!$booking->audio_guide_username || !$booking->audio_guide_password) {
+                Log::warning('sendTicket 422: Missing audio credentials', ['booking_id' => $id]);
                 return response()->json([
                     'success' => false,
                     'error' => 'Audio guide credentials are required for bookings with audio guide',
@@ -64,6 +72,13 @@ class MessageController extends Controller
         $attachmentIds = $validated['attachment_ids'] ?? [];
         $customMessage = null;
 
+        Log::info('=== SEND TICKET: VALIDATED DATA ===', [
+            'booking_id' => $id,
+            'language' => $language,
+            'attachment_ids' => $attachmentIds,
+            'attachment_count' => count($attachmentIds),
+        ]);
+
         // Handle custom message
         if ($language === 'custom') {
             if (empty($validated['custom_subject']) || empty($validated['custom_content'])) {
@@ -80,6 +95,7 @@ class MessageController extends Controller
 
         // Validate at least one attachment
         if (empty($attachmentIds)) {
+            Log::warning('sendTicket 422: No attachments', ['booking_id' => $id, 'attachment_ids' => $attachmentIds]);
             return response()->json([
                 'success' => false,
                 'error' => 'At least one PDF attachment is required',

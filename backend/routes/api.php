@@ -35,6 +35,9 @@ Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status'
 // Twilio incoming message webhook - verified via Twilio signature
 Route::post('/webhooks/twilio/incoming', [TwilioWebhookController::class, 'incoming']);
 
+// Public attachment access - for Twilio media URLs (secured via signed URL)
+Route::get('/public/attachments/{id}/{signature}', [AttachmentController::class, 'servePublic']);
+
 // Authentication routes - rate limited to prevent brute force
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
