@@ -4,17 +4,17 @@
 
 ## Project Overview
 
-The **Uffizi Ticket App** is a production ticket management dashboard for Uffizi Gallery tours. It enables staff to manage bookings, send tickets via WhatsApp/SMS/Email, and handle customer conversations.
+The **Uffizi Ticket App** is a production ticket management dashboard for Uffizi Gallery tours. It enables staff to manage bookings, send tickets via WhatsApp/SMS/Email, handle customer conversations, and manage audio guide access via PopGuide integration.
 
 **Live URL:** https://uffizi.deetech.cc
 
 | Metric | Value |
 |--------|-------|
-| Total Codebase | ~16,500 LOC across 76 files |
-| Backend | Laravel 12 (~8,000 LOC) |
-| Frontend | React 19 (~6,700 LOC) |
-| Database | MySQL with 26 migrations |
-| API Endpoints | 26 routes |
+| Total Codebase | ~18,000 LOC across 85+ files |
+| Backend | Laravel 12 (~9,000 LOC) |
+| Frontend | React 19 (~7,500 LOC) |
+| Database | MySQL with 28 migrations |
+| API Endpoints | 40+ routes |
 
 ---
 
@@ -23,19 +23,19 @@ The **Uffizi Ticket App** is a production ticket management dashboard for Uffizi
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                    FRONTEND (React 19 + Vite)                   │
-│  Dashboard │ TicketWizard │ Conversations │ TemplateAdmin      │
+│  Dashboard │ TicketWizard │ Conversations │ MessageHistory     │
 │                           │ Axios + Bearer Token                │
 └───────────────────────────┼─────────────────────────────────────┘
                             ▼
 ┌───────────────────────────────────────────────────────────────────┐
 │                    BACKEND (Laravel 12 API)                       │
-│  Controllers (11) → Services (6) → Models (7) → MySQL            │
+│  Controllers (14) → Services (7) → Models (8) → MySQL            │
 └───────────────────────────────────────────────────────────────────┘
                             │
-        ┌───────────────────┼───────────────────┐
-        ▼                   ▼                   ▼
-   Bokun API           Twilio API           AWS S3
-   (Bookings)       (WhatsApp/SMS)          (PDFs)
+        ┌───────────────────┼───────────────────┬───────────────┐
+        ▼                   ▼                   ▼               ▼
+   Bokun API           Twilio API           AWS S3         PopGuide API
+   (Bookings)       (WhatsApp/SMS)          (PDFs)        (Audio Guides)
 ```
 
 ---
@@ -48,32 +48,41 @@ The **Uffizi Ticket App** is a production ticket management dashboard for Uffizi
 backend/
 ├── app/
 │   ├── Http/
-│   │   ├── Controllers/        # 11 controllers
-│   │   │   ├── BookingController.php      # Main booking CRUD
-│   │   │   ├── MessageController.php      # Ticket sending
+│   │   ├── Controllers/        # 14 controllers
+│   │   │   ├── BookingController.php      # Main booking CRUD + sync
+│   │   │   ├── MessageController.php      # Ticket sending via wizard
+│   │   │   ├── MessageHistoryController.php # All messages view
 │   │   │   ├── ConversationController.php # WhatsApp/SMS inbox
-│   │   │   ├── ManualMessageController.php
-│   │   │   ├── TemplateAdminController.php
-│   │   │   ├── AttachmentController.php
-│   │   │   ├── TwilioWebhookController.php
-│   │   │   └── AuthController.php
+│   │   │   ├── ManualMessageController.php # Ad-hoc message sending
+│   │   │   ├── TemplateAdminController.php # Template management
+│   │   │   ├── AttachmentController.php   # PDF upload/serve
+│   │   │   ├── TwilioWebhookController.php # Twilio callbacks
+│   │   │   ├── VoxController.php          # PopGuide audio guide API
+│   │   │   ├── MonitoringController.php   # Delivery stats & alerts
+│   │   │   ├── WebhookController.php      # Bokun webhook admin
+│   │   │   ├── HealthController.php       # Health checks
+│   │   │   └── AuthController.php         # Login/logout
 │   │   └── Middleware/
-│   ├── Models/                 # 7 Eloquent models
+│   ├── Models/                 # 8 Eloquent models
 │   │   ├── Booking.php         # Central domain model
 │   │   ├── Conversation.php    # WhatsApp/SMS threads
-│   │   ├── Message.php
-│   │   ├── MessageAttachment.php
-│   │   ├── MessageTemplate.php
-│   │   └── WebhookLog.php
-│   └── Services/               # 6 service classes
-│       ├── MessagingService.php # Channel orchestration (USE THIS)
-│       ├── TwilioService.php    # WhatsApp/SMS
-│       ├── EmailService.php
-│       ├── BokunService.php
-│       └── IncomingMessageService.php
-├── database/migrations/        # 26 migrations
-├── routes/api.php              # API routes
-└── config/services.php         # External service config
+│   │   ├── Message.php         # Sent messages
+│   │   ├── MessageAttachment.php # PDF attachments
+│   │   ├── MessageTemplate.php # Email/SMS templates
+│   │   ├── WebhookLog.php      # Bokun webhook logs
+│   │   └── User.php            # Admin users
+│   └── Services/               # 7 service classes
+│       ├── MessagingService.php    # Channel orchestration (USE THIS)
+│       ├── TwilioService.php       # WhatsApp/SMS via Twilio
+│       ├── EmailService.php        # Email via SMTP
+│       ├── BokunService.php        # Booking sync from Bokun
+│       ├── VoxService.php          # PopGuide audio guide integration
+│       └── IncomingMessageService.php # Handle incoming messages
+├── config/
+│   ├── services.php            # External service config
+│   └── whatsapp_templates.php  # WhatsApp Content Template SIDs
+├── database/migrations/        # 28 migrations
+└── routes/api.php              # API routes
 ```
 
 ### Frontend (React 19 + Vite)
@@ -83,22 +92,34 @@ frontend/
 ├── src/
 │   ├── components/
 │   │   ├── BookingTable.jsx       # Main table with inline editing
-│   │   ├── TicketWizard/          # 6-step wizard
+│   │   ├── TicketWizard/          # 6-7 step wizard (dynamic)
 │   │   │   ├── index.jsx          # Wizard orchestrator
-│   │   │   └── steps/             # Step1-Step6 components
+│   │   │   ├── WizardProgress.jsx # Step indicator
+│   │   │   ├── WizardNavigation.jsx # Back/Next/Send buttons
+│   │   │   ├── CustomMessageModal.jsx # Custom message editor
+│   │   │   └── steps/
+│   │   │       ├── Step1BookingDetails.jsx  # Read-only booking info
+│   │   │       ├── Step2TicketReference.jsx # Reference number entry
+│   │   │       ├── Step3FileAttach.jsx      # PDF upload
+│   │   │       ├── Step4AudioGuide.jsx      # PopGuide generation (if audio)
+│   │   │       ├── Step4TemplateSelect.jsx  # Language selection
+│   │   │       ├── Step5Preview.jsx         # Message preview
+│   │   │       └── Step6SendStatus.jsx      # Send result
 │   │   ├── ManualSendModal.jsx
 │   │   ├── DateNavigator.jsx
 │   │   └── StatsCards.jsx
 │   ├── pages/
-│   │   ├── Dashboard.jsx          # Main view
+│   │   ├── Dashboard.jsx          # Main booking view
+│   │   ├── MessageHistory.jsx     # All sent messages
 │   │   ├── ConversationsPage.jsx  # WhatsApp/SMS inbox
-│   │   ├── TemplateAdmin.jsx
-│   │   └── Login.jsx
+│   │   ├── TemplateAdmin.jsx      # Template management
+│   │   ├── WebhookLogs.jsx        # Webhook admin
+│   │   └── Login.jsx              # Authentication
 │   ├── context/
 │   │   ├── AuthContext.jsx        # Authentication state
 │   │   └── ToastContext.jsx       # Notifications
 │   ├── services/
-│   │   └── api.js                 # Axios HTTP client
+│   │   └── api.js                 # Axios HTTP client + API facades
 │   └── constants/
 │       ├── bookingStatus.js
 │       └── guidedTours.js
@@ -111,10 +132,14 @@ frontend/
 
 ### Booking Types
 
-| Type | Product ID | Can Send Tickets? |
-|------|------------|-------------------|
-| Timed Entry | `961802` | ✅ Yes - via wizard |
-| Guided Tours | `961801`, `962885`, `962886`, `1130528`, `1135055` | ❌ No |
+| Type | Product ID | Can Send Tickets? | Has Audio Guide Option? |
+|------|------------|-------------------|------------------------|
+| Timed Entry | `961802` | Yes - via wizard | Yes (some bookings) |
+| Guided Tours | `961801`, `962885`, `962886`, `1130528`, `1135055` | No | No |
+
+### Audio Guide Detection
+
+Bookings with audio guide have `has_audio_guide = true`. The wizard adds an extra step (Step 4: Audio Guide) to generate PopGuide access before sending tickets.
 
 ### Message Channel Priority
 
@@ -130,12 +155,31 @@ Customer has phone?
          └── NO → Cannot send ✗
 ```
 
+### Wizard Steps (Dynamic)
+
+**Regular Bookings (6 steps):**
+1. Booking Details (read-only)
+2. Ticket Reference (enter reference number)
+3. Attach PDF (upload ticket PDF)
+4. Select Language (template language)
+5. Preview & Confirm
+6. Send Status
+
+**Audio Guide Bookings (7 steps):**
+1. Booking Details (read-only)
+2. Ticket Reference (enter reference number)
+3. Attach PDF (upload ticket PDF)
+4. **Audio Guide** (generate PopGuide link) ← Extra step
+5. Select Language (template language)
+6. Preview & Confirm
+7. Send Status
+
 ### Wizard Progress States
 
 | State | Meaning |
 |-------|---------|
 | `null` | Not started |
-| `in_progress` | Currently in wizard (step 1-6) |
+| `in_progress` | Currently in wizard |
 | `abandoned` | User left wizard incomplete |
 | `completed` | Tickets successfully sent |
 
@@ -153,8 +197,125 @@ Customer has phone?
 1. **Only Timed Entry tickets** can be sent through the wizard
 2. **Reference number required** before sending tickets
 3. **At least one PDF attachment** required for sending
-4. **Audio guide credentials** required if booking has audio guide
-5. **WhatsApp 24-hour window** - Can only send freely within 24 hours of customer message
+4. **PopGuide dynamic link required** if booking has audio guide (generated in Step 4)
+5. **WhatsApp 24-hour window** - Can only send templated messages outside window
+6. **Attachments must belong to booking** - Security check prevents sending wrong PDFs
+
+---
+
+## PopGuide/VOX Audio Guide Integration
+
+### Overview
+
+PopGuide (formerly VOX) provides audio guide services. When a booking includes audio guide, staff must generate a dynamic link before sending tickets.
+
+### Environment Variables
+
+```env
+# PopGuide/VOX Audio Guide API
+VOX_BASE_URL=https://popguide-staging.herokuapp.com  # or production URL
+VOX_API_KEY=your_api_key
+VOX_API_SECRET=your_api_secret
+VOX_ENVIRONMENT=staging  # or production
+```
+
+### Config (config/services.php)
+
+```php
+'vox' => [
+    'api_key' => env('VOX_API_KEY'),
+    'api_secret' => env('VOX_API_SECRET'),
+    'base_url' => env('VOX_BASE_URL', 'https://popguide-staging.herokuapp.com'),
+    'environment' => env('VOX_ENVIRONMENT', 'staging'),
+],
+```
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/bookings/{id}/create-vox-account` | POST | Generate PopGuide audio guide link |
+| `/api/bookings/{id}/vox-status` | GET | Check if booking has PopGuide link |
+| `/api/vox/test` | GET | Test PopGuide API connection |
+| `/api/vox/accounts/{accountId}` | GET | Get PopGuide account details |
+
+### VoxService Usage
+
+```php
+// In controller
+public function createAccount(int $id, VoxService $voxService): JsonResponse
+{
+    $booking = Booking::findOrFail($id);
+
+    // Check if booking has audio guide
+    if (!$booking->hasAudioGuide()) {
+        return response()->json(['error' => 'No audio guide'], 422);
+    }
+
+    // Create PopGuide account
+    $result = $voxService->createAccount($booking);
+
+    if ($result['success']) {
+        return response()->json([
+            'success' => true,
+            'dynamic_link' => $result['dynamic_link'],
+            'username' => $result['username'],
+            'password' => $result['password'],
+        ]);
+    }
+
+    return response()->json(['error' => $result['error']], 422);
+}
+```
+
+### PopGuide API Flow
+
+1. **Authentication**: Get Bearer token via `/partners_api/v3/sessions`
+2. **Create Account**: POST to `/partners_api/v3/accounts` with:
+   - `name`: Booking ID + Customer name
+   - `qty`: Number of guests (PAX)
+   - `payment_method`: "contract"
+   - `termination_date`: Tour date + 7 days
+   - `accesses`: Array with PopMap ID (698 for Uffizi)
+3. **Response**: Contains `dynamic_link`, `username`, `password`
+
+### Booking Fields for Audio Guide
+
+| Field | Description |
+|-------|-------------|
+| `has_audio_guide` | Boolean - does booking include audio guide? |
+| `vox_dynamic_link` | Generated PopGuide link (e.g., `https://pg-staging.unlockmy.app/xxx`) |
+| `vox_account_id` | PopGuide account ID |
+| `audio_guide_username` | Optional: PopGuide username |
+| `audio_guide_password` | Optional: PopGuide password |
+
+---
+
+## Message History Page
+
+### Features
+
+- **Auto-refresh**: 10-second interval with toggle (on/off)
+- **Date grouping**: Messages grouped by Today, Yesterday, or full date
+- **Expandable errors**: Click to show full error message
+- **Pagination**: Page numbers, per-page selector (25/50/100)
+- **Filtering**: By status, channel, search term
+- **Stats cards**: Total, success rate, failed count, by channel
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/messages/all` | GET | Paginated message list |
+| `/api/messages/stats` | GET | Message statistics |
+| `/api/messages/{id}/details` | GET | Single message details |
+| `/api/messages/{id}/retry` | POST | Retry failed message |
+
+### Query Parameters
+
+```
+GET /api/messages/all?status=failed&channel=whatsapp&search=john&page=1&per_page=25
+```
 
 ---
 
@@ -187,7 +348,7 @@ class YourController extends Controller
 
     /**
      * List resources with filtering and pagination.
-     * 
+     *
      * Query Parameters:
      * - status: Filter by status
      * - search: Search term
@@ -318,7 +479,7 @@ class YourService
 
         try {
             $data = $this->doSomething($booking);
-            
+
             $result['success'] = true;
             $result['data'] = $data;
 
@@ -345,7 +506,7 @@ public function sendTicket(Request $request, int $id): JsonResponse
 {
     $booking = Booking::findOrFail($id);
     $result = $this->messagingService->sendTicket($booking, $language, $attachmentIds);
-    
+
     if ($result['success']) {
         return response()->json([
             'success' => true,
@@ -377,6 +538,7 @@ Route::get('/health', [HealthController::class, 'check']);
 Route::post('/webhook/bokun', [BookingController::class, 'handleWebhook']);
 Route::post('/webhooks/twilio/status', [TwilioWebhookController::class, 'status']);
 Route::post('/webhooks/twilio/incoming', [TwilioWebhookController::class, 'incoming']);
+Route::get('/public/attachments/{id}/{signature}', [AttachmentController::class, 'servePublic']);
 
 Route::middleware('throttle:5,1')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
@@ -388,24 +550,53 @@ Route::middleware('throttle:5,1')->group(function () {
 |--------------------------------------------------------------------------
 */
 Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
-    
+
     Route::get('/user', fn(Request $request) => $request->user());
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Resource CRUD
+    // Booking CRUD
     Route::get('/bookings', [BookingController::class, 'index']);
+    Route::get('/bookings/grouped', [BookingController::class, 'groupedByDate']);
+    Route::get('/bookings/stats', [BookingController::class, 'stats']);
     Route::get('/bookings/{id}', [BookingController::class, 'show']);
-    Route::post('/bookings', [BookingController::class, 'store']);
     Route::put('/bookings/{id}', [BookingController::class, 'update']);
-    Route::delete('/bookings/{id}', [BookingController::class, 'destroy']);
-
-    // Custom actions
-    Route::post('/bookings/{id}/send-ticket', [MessageController::class, 'sendTicket']);
     Route::post('/bookings/{id}/wizard-progress', [BookingController::class, 'updateWizardProgress']);
 
-    // Heavy operations - stricter rate limiting
-    Route::middleware('throttle:10,1')->group(function () {
-        Route::post('/bookings/sync', [BookingController::class, 'syncBookings']);
+    // Messaging
+    Route::post('/bookings/{id}/send-ticket', [MessageController::class, 'sendTicket']);
+    Route::get('/bookings/{id}/detect-channel', [MessageController::class, 'detectChannel']);
+    Route::get('/bookings/{id}/messages', [MessageController::class, 'history']);
+    Route::post('/messages/preview', [MessageController::class, 'preview']);
+    Route::get('/messages/templates', [MessageController::class, 'templates']);
+
+    // Message History (all messages view)
+    Route::get('/messages/all', [MessageHistoryController::class, 'index']);
+    Route::get('/messages/stats', [MessageHistoryController::class, 'stats']);
+    Route::get('/messages/{id}/details', [MessageHistoryController::class, 'show']);
+    Route::post('/messages/{id}/retry', [MessageHistoryController::class, 'retry']);
+
+    // Attachments
+    Route::post('/bookings/{id}/attachments', [AttachmentController::class, 'store']);
+    Route::get('/bookings/{id}/attachments', [AttachmentController::class, 'index']);
+    Route::delete('/attachments/{id}', [AttachmentController::class, 'destroy']);
+
+    // VOX/PopGuide Audio Guide
+    Route::post('/bookings/{id}/create-vox-account', [VoxController::class, 'createAccount']);
+    Route::get('/bookings/{id}/vox-status', [VoxController::class, 'getStatus']);
+    Route::get('/vox/test', [VoxController::class, 'testConnection']);
+
+    // Conversations (WhatsApp/SMS inbox)
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::get('/conversations/unread-count', [ConversationController::class, 'unreadCount']);
+    Route::get('/conversations/{id}', [ConversationController::class, 'show']);
+    Route::post('/conversations/{id}/reply', [ConversationController::class, 'reply']);
+    Route::put('/conversations/{id}/read', [ConversationController::class, 'markRead']);
+
+    // Monitoring
+    Route::prefix('monitoring')->group(function () {
+        Route::get('/delivery-stats', [MonitoringController::class, 'deliveryStats']);
+        Route::get('/failed-messages', [MonitoringController::class, 'failedMessages']);
+        Route::get('/channel-health', [MonitoringController::class, 'channelHealth']);
     });
 
     // Admin routes
@@ -466,45 +657,6 @@ Log::error('Failed to send ticket', [
     'channel' => $channel,
     'error' => $e->getMessage(),
 ]);
-```
-
-## Webhook Handling
-
-```php
-public function handleWebhook(Request $request): JsonResponse
-{
-    $payload = $request->all();
-    $headers = $request->headers->all();
-
-    // 1. Log the webhook
-    $webhookLog = WebhookLog::create([
-        'event_type' => $payload['eventType'] ?? 'unknown',
-        'payload' => $payload,
-        'headers' => $headers,
-        'status' => 'pending',
-    ]);
-
-    try {
-        // 2. Verify signature
-        if (!$this->verifySignature($headers, $payload)) {
-            throw new \Exception('Signature verification failed');
-        }
-
-        // 3. Process
-        $result = $this->processEvent($payload);
-        $webhookLog->markAsProcessed();
-        
-        return response()->json($result, 200);
-
-    } catch (\Exception $e) {
-        // Return 200 to prevent retries
-        $webhookLog->markAsFailed($e->getMessage());
-        return response()->json([
-            'message' => 'Webhook received but processing failed',
-            'error' => $e->getMessage(),
-        ], 200);
-    }
-}
 ```
 
 ---
@@ -569,7 +721,8 @@ export const bookingsAPI = {
   update: (id, data) => api.put(`/bookings/${id}`, data),
   delete: (id) => api.delete(`/bookings/${id}`),
   sync: () => api.post('/bookings/sync'),
-  updateWizardProgress: (id, data) => api.post(`/bookings/${id}/wizard-progress`, data),
+  updateWizardProgress: (id, step, action) =>
+    api.post(`/bookings/${id}/wizard-progress`, { step, action }),
 };
 
 export const messagesAPI = {
@@ -578,6 +731,9 @@ export const messagesAPI = {
   preview: (data) => api.post('/messages/preview', data),
   history: (bookingId) => api.get(`/bookings/${bookingId}/messages`),
   templates: (params) => api.get('/messages/templates', { params }),
+  // Message history (all messages)
+  all: (params) => api.get('/messages/all', { params }),
+  stats: () => api.get('/messages/stats'),
 };
 
 export const attachmentsAPI = {
@@ -586,6 +742,12 @@ export const attachmentsAPI = {
   }),
   list: (bookingId) => api.get(`/bookings/${bookingId}/attachments`),
   delete: (id) => api.delete(`/attachments/${id}`),
+};
+
+export const voxAPI = {
+  createAccount: (bookingId) => api.post(`/bookings/${bookingId}/create-vox-account`),
+  getStatus: (bookingId) => api.get(`/bookings/${bookingId}/vox-status`),
+  testConnection: () => api.get('/vox/test'),
 };
 
 export const conversationsAPI = {
@@ -597,350 +759,131 @@ export const conversationsAPI = {
 };
 ```
 
-## Context Patterns
-
-### AuthContext
+## Wizard Component Pattern (Dynamic Steps)
 
 ```jsx
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authAPI } from '../services/api';
+import { useState, useEffect, useMemo } from 'react';
 
-const AuthContext = createContext(null);
+// Dynamic steps based on booking type
+const getSteps = (hasAudioGuide) => {
+  const steps = [
+    { id: 1, title: 'Booking Details' },
+    { id: 2, title: 'Ticket Reference' },
+    { id: 3, title: 'Attach PDF' },
+  ];
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  if (hasAudioGuide) {
+    steps.push({ id: 4, title: 'Audio Guide' });
+    steps.push({ id: 5, title: 'Select Language' });
+    steps.push({ id: 6, title: 'Preview & Confirm' });
+    steps.push({ id: 7, title: 'Send Status' });
+  } else {
+    steps.push({ id: 4, title: 'Select Language' });
+    steps.push({ id: 5, title: 'Preview & Confirm' });
+    steps.push({ id: 6, title: 'Send Status' });
+  }
 
-  useEffect(() => {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      authAPI.user()
-        .then(res => setUser(res.data))
-        .catch(() => localStorage.removeItem('auth_token'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
-  }, []);
-
-  const login = useCallback(async (email, password) => {
-    const response = await authAPI.login({ email, password });
-    const { token, user } = response.data;
-    localStorage.setItem('auth_token', token);
-    setUser(user);
-    return user;
-  }, []);
-
-  const logout = useCallback(async () => {
-    try {
-      await authAPI.logout();
-    } finally {
-      localStorage.removeItem('auth_token');
-      setUser(null);
-    }
-  }, []);
-
-  return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-}
-```
-
-### ToastContext
-
-```jsx
-import { createContext, useContext, useState, useCallback } from 'react';
-
-const ToastContext = createContext(null);
-
-export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
-
-  const addToast = useCallback((message, type = 'info', duration = 5000) => {
-    const id = Date.now();
-    setToasts(prev => [...prev, { id, message, type }]);
-    
-    if (duration > 0) {
-      setTimeout(() => {
-        setToasts(prev => prev.filter(t => t.id !== id));
-      }, duration);
-    }
-    return id;
-  }, []);
-
-  const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
-  }, []);
-
-  const success = useCallback((msg) => addToast(msg, 'success'), [addToast]);
-  const error = useCallback((msg) => addToast(msg, 'error', 8000), [addToast]);
-  const warning = useCallback((msg) => addToast(msg, 'warning'), [addToast]);
-  const info = useCallback((msg) => addToast(msg, 'info'), [addToast]);
-
-  return (
-    <ToastContext.Provider value={{ toasts, addToast, removeToast, success, error, warning, info }}>
-      {children}
-    </ToastContext.Provider>
-  );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) throw new Error('useToast must be used within ToastProvider');
-  return context;
-}
-```
-
-## Page Component Template
-
-```jsx
-import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../context/ToastContext';
-import { someAPI } from '../services/api';
-
-export default function MyPage() {
-  const { user } = useAuth();
-  const { success, error } = useToast();
-  
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ search: '', status: '' });
-
-  useEffect(() => {
-    fetchData();
-  }, [filters]);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await someAPI.list(filters);
-      setData(response.data);
-    } catch (err) {
-      error('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAction = async (id) => {
-    try {
-      await someAPI.action(id);
-      success('Action completed');
-      fetchData();
-    } catch (err) {
-      error('Action failed: ' + (err.response?.data?.error || err.message));
-    }
-  };
-
-  if (loading) return <div className="loading">Loading...</div>;
-
-  return (
-    <div className="page-container">
-      <div className="filters">
-        <input
-          type="text"
-          placeholder="Search..."
-          value={filters.search}
-          onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-        />
-      </div>
-      <div className="content">
-        {data.map(item => (
-          <div key={item.id} onClick={() => handleAction(item.id)}>
-            {item.name}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-```
-
-## Wizard Component Pattern
-
-```jsx
-import { useState, useEffect } from 'react';
-import { useToast } from '../../context/ToastContext';
-import { bookingsAPI } from '../../services/api';
-
-const STEPS = [
-  { id: 1, title: 'Booking Details', component: Step1 },
-  { id: 2, title: 'Ticket Reference', component: Step2 },
-  { id: 3, title: 'Attach Files', component: Step3 },
-  { id: 4, title: 'Select Template', component: Step4 },
-  { id: 5, title: 'Preview', component: Step5 },
-  { id: 6, title: 'Send Status', component: Step6 },
-];
+  return steps;
+};
 
 export default function TicketWizard({ booking, onClose, onComplete }) {
-  const { error } = useToast();
+  const hasAudioGuide = booking.has_audio_guide;
+  const STEPS = useMemo(() => getSteps(hasAudioGuide), [hasAudioGuide]);
+  const totalSteps = STEPS.length;
+
+  // Step mappings
+  const STEP_LANGUAGE = hasAudioGuide ? 5 : 4;
+  const STEP_PREVIEW = hasAudioGuide ? 6 : 5;
+  const STEP_SEND = hasAudioGuide ? 7 : 6;
+  const STEP_AUDIO = hasAudioGuide ? 4 : null;
+
   const [currentStep, setCurrentStep] = useState(1);
   const [wizardData, setWizardData] = useState({
-    booking,
     referenceNumber: booking.reference_number || '',
     attachments: [],
     language: 'en',
+    voxDynamicLink: booking.vox_dynamic_link || null,
+    hasVoxAccount: !!booking.vox_dynamic_link,
   });
 
-  // Track wizard progress
-  useEffect(() => {
-    trackProgress('start');
-    return () => {
-      if (currentStep < 6) trackProgress('abandon');
-    };
-  }, []);
-
-  const trackProgress = async (action) => {
-    try {
-      await bookingsAPI.updateWizardProgress(booking.id, { step: currentStep, action });
-    } catch (err) {
-      console.error('Failed to track progress:', err);
+  // Prevent accidental closure
+  const handleOverlayClick = (e) => {
+    if (e.target === e.currentTarget) {
+      // Don't close on overlay click - require explicit X button
     }
   };
 
-  const handleNext = () => {
-    if (currentStep < STEPS.length) {
-      setCurrentStep(prev => prev + 1);
-      trackProgress('progress');
+  const handleClose = () => {
+    if (currentStep > 1) {
+      const confirmClose = window.confirm(
+        'Are you sure you want to close? Your progress will be lost.'
+      );
+      if (!confirmClose) return;
     }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) setCurrentStep(prev => prev - 1);
-  };
-
-  const handleComplete = () => {
-    trackProgress('complete');
-    onComplete?.();
     onClose();
   };
 
-  const StepComponent = STEPS[currentStep - 1].component;
-
-  return (
-    <div className="wizard-container">
-      <div className="wizard-progress">
-        {STEPS.map(step => (
-          <div key={step.id} className={`step ${currentStep >= step.id ? 'active' : ''}`}>
-            {step.title}
-          </div>
-        ))}
-      </div>
-      <StepComponent
-        wizardData={wizardData}
-        updateData={(updates) => setWizardData(prev => ({ ...prev, ...updates }))}
-        onNext={handleNext}
-        onBack={handleBack}
-        onComplete={handleComplete}
-      />
-    </div>
-  );
+  // ... rest of wizard logic
 }
 ```
 
-## Error Handling
+## Auto-Refresh Pattern
 
 ```jsx
-const handleApiCall = async () => {
-  try {
-    const response = await someAPI.action();
-    success('Operation completed');
-    return response.data;
-  } catch (err) {
-    const message = err.response?.data?.error 
-      || err.response?.data?.message 
-      || err.message 
-      || 'An error occurred';
-    error(message);
-    return null;
-  }
-};
-```
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-## File Upload Pattern
+export default function MessageHistory() {
+  const [messages, setMessages] = useState([]);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
+  const refreshIntervalRef = useRef(null);
 
-```jsx
-const handleFileUpload = async (files) => {
-  const formData = new FormData();
-  
-  for (const file of files) {
-    if (file.type !== 'application/pdf') {
-      error('Only PDF files are allowed');
-      return;
+  const fetchMessages = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
+    try {
+      const response = await api.get('/messages/all', { params });
+      setMessages(response.data.data || []);
+      setLastRefresh(new Date());
+    } catch (err) {
+      if (!silent) showError('Failed to load messages');
+    } finally {
+      if (!silent) setLoading(false);
     }
-    if (file.size > 10 * 1024 * 1024) {
-      error('File size must be less than 10MB');
-      return;
-    }
-    formData.append('files[]', file);
-  }
+  }, [params]);
 
-  try {
-    setUploading(true);
-    const response = await attachmentsAPI.upload(bookingId, formData);
-    success(`Uploaded ${files.length} file(s)`);
-    return response.data;
-  } catch (err) {
-    error('Upload failed');
-  } finally {
-    setUploading(false);
-  }
-};
+  // Auto-refresh every 10 seconds
+  useEffect(() => {
+    if (autoRefresh) {
+      refreshIntervalRef.current = setInterval(() => {
+        fetchMessages(true); // silent refresh
+      }, 10000);
+    }
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current);
+      }
+    };
+  }, [autoRefresh, fetchMessages]);
+
+  return (
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={autoRefresh}
+          onChange={(e) => setAutoRefresh(e.target.checked)}
+        />
+        Auto-refresh
+      </label>
+      <span>Updated: {lastRefresh.toLocaleTimeString()}</span>
+    </div>
+  );
+}
 ```
 
 ---
 
 # TWILIO MESSAGING PATTERNS
-
-## Channel Detection Logic
-
-```php
-public function hasWhatsApp(string $phoneNumber): bool
-{
-    $phone = $this->formatPhoneNumber($phoneNumber);
-
-    // Countries where WhatsApp is NOT common
-    $nonWhatsAppCountries = ['+86', '+81', '+82', '+7', '+1'];
-    foreach ($nonWhatsAppCountries as $prefix) {
-        if (str_starts_with($phone, $prefix)) {
-            return false;
-        }
-    }
-
-    // Use Twilio Lookup for other countries
-    try {
-        $lookup = $this->getClient()->lookups->v2->phoneNumbers($phone)
-            ->fetch(['fields' => 'line_type_intelligence']);
-        $lineType = $lookup->lineTypeIntelligence['type'] ?? null;
-        return in_array($lineType, ['mobile', 'voip'], true);
-    } catch (TwilioException $e) {
-        return false; // Safe fallback
-    }
-}
-```
-
-## Phone Number Formatting
-
-```php
-// Always use E.164 format: +[country code][number]
-protected function formatPhoneNumber(string $phone): string
-{
-    $phone = preg_replace('/[^\d+]/', '', $phone);
-    if (!str_starts_with($phone, '+')) {
-        $phone = '+' . $phone;
-    }
-    return $phone;
-}
-```
 
 ## WhatsApp Content Templates
 
@@ -948,10 +891,10 @@ WhatsApp messages use **Twilio Content Templates** with dynamic variables. Templ
 
 ### Template Types
 
-| Type | Description | Variables |
-|------|-------------|-----------|
-| `ticket_pdf` | Ticket without audio guide | {{1}}-{{5}} |
-| `ticket_audio_pdf` | Ticket with audio guide | {{1}}-{{5}} |
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `ticket_pdf` | Ticket without audio guide | Regular timed entry |
+| `ticket_audio_pdf` | Ticket with audio guide | Timed entry + PopGuide |
 
 ### Template Variables
 
@@ -974,32 +917,47 @@ Templates MUST have `{{5}}` as dynamic media URL in Twilio Console:
 "media": ["https://bucket.s3.amazonaws.com/static-file.pdf"]
 ```
 
+### Template SID Configuration
+
+```php
+// config/whatsapp_templates.php
+return [
+    'ticket_pdf' => [
+        'en' => 'HXe99a2433d4e53e42ac5dca877eaa8851',
+        'it' => 'HXe06570ac850a2549f46ec292d0276ebe',
+        'de' => 'HX98b5b8c42b0e5c0c991d6a24b0bdcffe',
+        'fr' => 'HX7d751e70ec0cbfba83b6dbad4dde95aa',
+        // ... more languages
+    ],
+    'ticket_audio_pdf' => [
+        'en' => 'HX1234567890abcdef...',
+        // ... more languages
+    ],
+];
+```
+
 ### Sending WhatsApp with Content Templates
 
 ```php
-public function sendWhatsApp(Booking $booking, MessageTemplate $template, array $attachments = []): Message
+public function sendWhatsApp(Booking $booking, string $language, array $attachments): Message
 {
     $phone = $this->formatPhoneNumber($booking->customer_phone);
-    $language = $template->language ?? 'en';
     $hasAudioGuide = $booking->has_audio_guide;
 
-    // Generate PDF URL from attachment
-    $pdfUrl = null;
-    if (!empty($attachments)) {
-        $firstAttachment = reset($attachments);
-        $pdfUrl = $firstAttachment->getTemporaryUrl(); // 7-day presigned URL
-    }
+    // Get PDF URL
+    $pdfUrl = $attachments[0]->getTemporaryUrl();
 
     // Get Content Template SID
-    $contentSid = $this->getWhatsAppTemplateSid($language, $hasAudioGuide, !empty($pdfUrl));
+    $templateType = $hasAudioGuide ? 'ticket_audio_pdf' : 'ticket_pdf';
+    $contentSid = config("whatsapp_templates.{$templateType}.{$language}");
 
     // Build template variables
     $contentVariables = [
         '1' => $booking->customer_name ?? 'Guest',
         '2' => $booking->tour_date->format('F j, Y') . ' at 10:00 AM',
-        '3' => $hasAudioGuide ? $booking->vox_dynamic_link : 'https://uffizi.florencewithlocals.com',
-        '4' => 'https://uffizi.florencewithlocals.com/know-before-you-go',
-        '5' => $pdfUrl, // PDF attachment URL
+        '3' => $hasAudioGuide ? $booking->vox_dynamic_link : 'https://guide.url',
+        '4' => 'https://know-before-you-go.url',
+        '5' => $pdfUrl,
     ];
 
     // Send via Twilio Content API
@@ -1021,83 +979,44 @@ Error 63021 "Channel invalid content error" usually means:
 3. PDF URL is not publicly accessible
 4. Variables don't match template placeholders
 
-## Status Callback Handling
+### Verifying Template Delivery
 
-```php
-public function handleStatusCallback(array $data): void
-{
-    $sid = $data['MessageSid'] ?? null;
-    $status = $data['MessageStatus'] ?? null;
-
-    if (!$sid || !$status) return;
-
-    $message = Message::where('external_id', $sid)->first();
-    if (!$message) return;
-
-    switch (strtolower($status)) {
-        case 'delivered':
-            $message->markDelivered();
-            break;
-        case 'read':
-            $message->markRead();
-            break;
-        case 'failed':
-        case 'undelivered':
-            $errorCode = $data['ErrorCode'] ?? 'Unknown';
-            $message->markFailed("Error {$errorCode}");
-            break;
-    }
-}
-```
-
-## Template Variables
-
-### Email/SMS Templates (Blade-style)
-
-```php
-// Available in Booking::getTemplateVariables()
-[
-    'customer_name' => 'John Doe',
-    'customer_email' => 'john@example.com',
-    'tour_date' => 'January 25, 2026',
-    'tour_time' => '10:00 AM',
-    'product_name' => 'Uffizi Gallery Timed Entry',
-    'pax' => '2',
-    'reference_number' => 'ABC123',
-    'audio_guide_url' => 'https://...',
-    'audio_guide_username' => 'user123',
-    'audio_guide_password' => 'pass456',
-]
-
-// Template example:
-// "Hello {{customer_name}}, your tickets for {{product_name}} on {{tour_date}} at {{tour_time}} are attached."
-```
-
-### WhatsApp Content Templates (Twilio-style)
-
-```php
-// Built via TwilioService::buildTemplateVariables()
-[
-    '1' => 'John Doe',           // customer_name
-    '2' => 'January 25, 2026 at 10:00 AM',  // entry_datetime
-    '3' => 'https://...',        // online_guide_url or vox_dynamic_link
-    '4' => 'https://...',        // know_before_you_go_url
-    '5' => 'https://...',        // pdf_url (S3 presigned or local signed URL)
-]
-```
+Twilio returns "sent" immediately but messages can fail later. To verify actual delivery:
+1. Wait 15+ seconds after sending
+2. Fetch message status from Twilio API
+3. Check for "delivered" status, not just "sent"
 
 ---
 
 # DATABASE CONVENTIONS
 
-## Migration Naming
+## Key Tables
 
-```
-YYYY_MM_DD_HHMMSS_<action>_<table>_table.php
+| Table | Description |
+|-------|-------------|
+| `bookings` | Main booking data from Bokun |
+| `messages` | Sent messages (WhatsApp/Email/SMS) |
+| `message_attachments` | PDF files uploaded for bookings |
+| `message_templates` | Email/SMS templates by language |
+| `conversations` | WhatsApp/SMS conversation threads |
+| `webhook_logs` | Bokun webhook history |
+| `users` | Admin users |
 
-Examples:
-2026_01_25_100001_create_message_templates_table.php
-2026_01_26_100000_add_wizard_progress_to_bookings_table.php
+## Booking Model Key Fields
+
+```php
+// Audio guide fields
+$booking->has_audio_guide        // Boolean
+$booking->vox_dynamic_link       // PopGuide link (e.g., https://pg.unlockmy.app/xxx)
+$booking->vox_account_id         // PopGuide account ID
+$booking->audio_guide_username   // Optional username
+$booking->audio_guide_password   // Optional password
+
+// Wizard tracking
+$booking->wizard_progress        // in_progress, abandoned, completed
+$booking->wizard_step            // Current step number
+$booking->wizard_started_at      // When wizard was opened
+$booking->wizard_completed_at    // When ticket was sent
 ```
 
 ## Migration Template
@@ -1115,22 +1034,21 @@ return new class extends Migration
     {
         Schema::create('your_table', function (Blueprint $table) {
             $table->id();
-            
+
             // Foreign keys
             $table->foreignId('booking_id')->constrained()->onDelete('cascade');
-            $table->foreignId('conversation_id')->nullable()->constrained()->onDelete('set null');
-            
+
             // Fields
             $table->string('name', 255);
             $table->string('status', 50)->default('pending');
             $table->text('content');
             $table->json('metadata')->nullable();
-            
+
             // Timestamps
             $table->timestamp('sent_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             // Indexes
             $table->index('status');
             $table->index(['booking_id', 'channel']);
@@ -1142,87 +1060,6 @@ return new class extends Migration
         Schema::dropIfExists('your_table');
     }
 };
-```
-
-## Model Pattern
-
-```php
-<?php
-
-namespace App\Models;
-
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
-class YourModel extends Model
-{
-    use SoftDeletes;
-
-    protected $fillable = ['name', 'status', 'metadata'];
-
-    protected $appends = ['computed_field'];
-
-    protected $casts = [
-        'metadata' => 'array',
-        'is_active' => 'boolean',
-        'sent_at' => 'datetime',
-    ];
-
-    // Constants
-    public const STATUS_PENDING = 'pending';
-    public const STATUS_ACTIVE = 'active';
-
-    // Relationships
-    public function messages(): HasMany
-    {
-        return $this->hasMany(Message::class);
-    }
-
-    public function booking(): BelongsTo
-    {
-        return $this->belongsTo(Booking::class);
-    }
-
-    // Accessors
-    protected function getComputedFieldAttribute(): string
-    {
-        return $this->name . ' - ' . $this->status;
-    }
-
-    // Scopes
-    public function scopeActive($query)
-    {
-        return $query->where('status', 'active');
-    }
-
-    // Status transitions
-    public function markSent(?string $externalId = null): void
-    {
-        $this->update([
-            'status' => self::STATUS_SENT,
-            'external_id' => $externalId,
-            'sent_at' => now(),
-        ]);
-    }
-}
-```
-
-## JSON Column Queries
-
-```php
-// Search in JSON array
-$bookings = Booking::whereRaw(
-    "JSON_SEARCH(participants, 'one', ?, NULL, '$[*].name') IS NOT NULL",
-    ['%' . $searchTerm . '%']
-)->get();
-
-// Check JSON contains
-$bookings = Booking::whereJsonContains('pax_details', ['type' => 'Adult'])->get();
-
-// Get JSON length
-$bookings = Booking::whereRaw('JSON_LENGTH(participants) > ?', [0])->get();
 ```
 
 ---
@@ -1249,7 +1086,7 @@ TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=
 TWILIO_WHATSAPP_FROM=+14155238886
 TWILIO_SMS_FROM=+15005550006
-TWILIO_STATUS_CALLBACK_URL=https://your-domain.com/api/webhooks/twilio/status
+TWILIO_STATUS_CALLBACK_URL=https://uffizi.deetech.cc/api/webhooks/twilio/status
 
 # Bokun
 BOKUN_ACCESS_KEY=
@@ -1261,6 +1098,12 @@ AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=eu-central-1
 AWS_BUCKET=
+
+# PopGuide/VOX Audio Guide API
+VOX_BASE_URL=https://popguide-staging.herokuapp.com
+VOX_API_KEY=
+VOX_API_SECRET=
+VOX_ENVIRONMENT=staging
 
 # Email
 MAIL_MAILER=smtp
@@ -1277,6 +1120,30 @@ VITE_API_URL=https://uffizi.deetech.cc/api
 
 ---
 
+# DEPLOYMENT
+
+## Server Details
+
+- **Hosting**: Hostinger shared hosting
+- **PHP Version**: 8.2 (`/opt/alt/php82/usr/bin/php`)
+- **SSH Port**: 65002
+- **Path**: `~/domains/deetech.cc/public_html/uffizi/`
+
+## Deploy Commands
+
+```bash
+# Frontend build
+cd frontend && npm run build
+
+# Upload to server
+scp -P 65002 -r frontend/dist/* user@server:domains/deetech.cc/public_html/uffizi/
+
+# Backend: Clear cache after .env changes
+ssh -p 65002 user@server "cd domains/deetech.cc/public_html/uffizi/backend && /opt/alt/php82/usr/bin/php artisan config:clear && /opt/alt/php82/usr/bin/php artisan cache:clear"
+```
+
+---
+
 # COMMON GOTCHAS
 
 1. **WhatsApp 24-hour window** - Can only send templated messages outside window
@@ -1286,10 +1153,13 @@ VITE_API_URL=https://uffizi.deetech.cc/api
 5. **Cache invalidation** - Clear stats cache after booking updates
 6. **OTA bookings** - May have limited/no contact information
 7. **Media URLs** - Must be publicly accessible for WhatsApp (use pre-signed S3 URLs)
-8. **WhatsApp Content Templates** - Templates MUST use `{{5}}` for dynamic PDF URL, not hardcoded URLs
+8. **WhatsApp Content Templates** - Templates MUST use `{{5}}` for dynamic PDF URL
 9. **Error 63021** - Usually means template has hardcoded media URL or is not approved
 10. **pax_details JSON** - May come as string from API; frontend must parse with `JSON.parse()`
-11. **S3 vs Local storage** - Check `config('services.aws.bucket')` to determine disk; local files use signed URLs via `/api/public/attachments/{id}/{signature}`
+11. **S3 vs Local storage** - Check `config('services.aws.bucket')` to determine disk
+12. **PopGuide tokens** - Cached for 23 hours, auto-refreshed
+13. **Audio guide validation** - Wizard requires `vox_dynamic_link` (not username/password)
+14. **Wizard overlay click** - Does NOT close wizard; must use X button
 
 ---
 
@@ -1315,3 +1185,27 @@ VITE_API_URL=https://uffizi.deetech.cc/api
 2. Never call `TwilioService` or `EmailService` directly from controllers
 3. Check channel availability with `detectChannel()`
 4. Handle all three channels: WhatsApp, Email, SMS
+
+## Audio Guide Flow
+
+1. Check `booking.has_audio_guide`
+2. If true, wizard shows Step 4 (Audio Guide)
+3. User clicks "Generate Audio Guide" → calls `voxAPI.createAccount()`
+4. PopGuide returns `dynamic_link` → stored in `booking.vox_dynamic_link`
+5. Ticket message includes PopGuide link in `{{3}}` variable
+
+## Testing PopGuide Integration
+
+```bash
+# Test API connection
+curl -X GET https://uffizi.deetech.cc/api/vox/test \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Check booking VOX status
+curl -X GET https://uffizi.deetech.cc/api/bookings/123/vox-status \
+  -H "Authorization: Bearer YOUR_TOKEN"
+
+# Generate audio guide
+curl -X POST https://uffizi.deetech.cc/api/bookings/123/create-vox-account \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
