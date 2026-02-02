@@ -604,3 +604,37 @@
   color: #065f46;
   font-size: 0.875rem;
 }
+
+/* =====================================================
+   Step 2 - Audio Guide Notice
+   ===================================================== */
+
+.audio-guide-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border: 1px solid #93c5fd;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+.audio-guide-notice .notice-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.audio-guide-notice .notice-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #1e40af;
+  font-size: 1rem;
+}
+
+.audio-guide-notice .notice-content p {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}

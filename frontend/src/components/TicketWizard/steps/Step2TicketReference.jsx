@@ -132,59 +132,16 @@ export default function Step2TicketReference({ booking, data, onChange }) {
       )}
 
       {booking.has_audio_guide && (
-        <>
-          <div className="audio-guide-section">
-            <h4>
-              <span className="audio-icon">🎧</span> Audio Guide Details (PopGuide)
-            </h4>
-            <p className="section-description">
-              This booking includes an audio guide. Enter the PopGuide credentials.
+        <div className="audio-guide-notice">
+          <div className="notice-icon">🎧</div>
+          <div className="notice-content">
+            <h4>Audio Guide Included</h4>
+            <p>
+              This booking includes an audio guide. You'll generate the PopGuide
+              access link in the next steps.
             </p>
-
-            <div className="form-group">
-              <label htmlFor="audioGuideUsername">
-                Username <span className="required">*</span>
-              </label>
-              <input
-                type="text"
-                id="audioGuideUsername"
-                value={data.audioGuideUsername}
-                onChange={handleChange('audioGuideUsername')}
-                placeholder="e.g., TKE-000392"
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="audioGuidePassword">
-                Password <span className="required">*</span>
-              </label>
-              <input
-                type="text"
-                id="audioGuidePassword"
-                value={data.audioGuidePassword}
-                onChange={handleChange('audioGuidePassword')}
-                placeholder="e.g., 52628"
-                className="form-input"
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="audioGuideUrl">Access URL</label>
-              <input
-                type="url"
-                id="audioGuideUrl"
-                value={data.audioGuideUrl}
-                onChange={handleChange('audioGuideUrl')}
-                placeholder="e.g., https://pg.unlockmy.app/..."
-                className="form-input"
-              />
-              <p className="form-help">
-                The PopGuide access link (optional - will use default if empty)
-              </p>
-            </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

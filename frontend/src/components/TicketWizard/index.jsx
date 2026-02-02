@@ -261,16 +261,35 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     }
   };
 
-  const handleClose = () => {
+  const handleClose = (force = false) => {
     // If ticket was sent successfully, mark as complete and call onComplete
     if (wizardData.sendResult?.success) {
       bookingsAPI.updateWizardProgress(booking.id, STEP_SEND, 'complete').catch(console.error);
       onComplete?.(wizardData.sendResult);
-    } else {
-      // Mark as abandoned if closed without completing
-      bookingsAPI.updateWizardProgress(booking.id, currentStep, 'abandon').catch(console.error);
+      onClose();
+      return;
     }
+
+    // If user has made progress (step > 1), confirm before closing
+    if (!force && currentStep > 1) {
+      const confirmClose = window.confirm(
+        'Are you sure you want to close? Your progress will be lost.'
+      );
+      if (!confirmClose) return;
+    }
+
+    // Mark as abandoned if closed without completing
+    bookingsAPI.updateWizardProgress(booking.id, currentStep, 'abandon').catch(console.error);
     onClose();
+  };
+
+  // Handle overlay click - require explicit close, don't close on overlay
+  const handleOverlayClick = (e) => {
+    // Only close if clicking directly on the overlay, not inside the wizard
+    if (e.target === e.currentTarget) {
+      // Don't auto-close on overlay click - user must use X button
+      // This prevents accidental closure
+    }
   };
 
   const renderStep = () => {
@@ -352,7 +371,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
   const showCloseButton = currentStep === STEP_SEND && wizardData.sendResult;
 
   return (
-    <div className="ticket-wizard-overlay" onClick={handleClose}>
+    <div className="ticket-wizard-overlay" onClick={handleOverlayClick}>
       <div className="ticket-wizard" onClick={(e) => e.stopPropagation()}>
         <div className="wizard-header">
           <h2>Send Ticket to Customer</h2>

@@ -49,13 +49,13 @@ class MessageController extends Controller
             ], 422);
         }
 
-        // Validate audio guide credentials if booking has audio guide
+        // Validate audio guide dynamic link if booking has audio guide
         if ($booking->has_audio_guide) {
-            if (!$booking->audio_guide_username || !$booking->audio_guide_password) {
-                Log::warning('sendTicket 422: Missing audio credentials', ['booking_id' => $id]);
+            if (!$booking->vox_dynamic_link) {
+                Log::warning('sendTicket 422: Missing audio guide link', ['booking_id' => $id]);
                 return response()->json([
                     'success' => false,
-                    'error' => 'Audio guide credentials are required for bookings with audio guide',
+                    'error' => 'Audio guide link is required. Please generate the PopGuide link first.',
                 ], 422);
             }
         }

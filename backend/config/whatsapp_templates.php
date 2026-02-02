@@ -34,14 +34,14 @@ return [
     */
     'ticket_pdf' => [
         'en' => 'HXe99a2433d4e53e42ac5dca877eaa8851', // English
-        'it' => 'HX7d35de5a55faa43e826a807e687c1216', // Italian
+        'it' => 'HXe06570ac850a2549f46ec292d0276ebe', // Italian (NEW)
         'es' => 'HXaca15d24845e4e4115dda3d5886f69ba', // Spanish
-        'de' => 'HX268847fee98cf54bdd967c68a0be803e', // German
-        'fr' => 'HX731940512951f890852567eaa8e2e0cd', // French
+        'de' => 'HX98b5b8c42b0e5c0c991d6a24b0bdcffe', // German (NEW)
+        'fr' => 'HX7d751e70ec0cbfba83b6dbad4dde95aa', // French (NEW)
         'pt' => 'HXb4dbb32e5d61194832541afe9b2a0b16', // Portuguese
         'ja' => 'HX1eaab455cc7a45ab0d9079bdf4db7e97', // Japanese
         'ko' => 'HX1e748c4e5cf7694fca60f28501cb2524', // Korean
-        'el' => 'HX16926a51c9005942b3567a0399fbbd81', // Greek
+        'el' => 'HX5953568a45ab027b6c2d3bfcacfeca4c', // Greek (NEW)
         'tr' => 'HX2c99778da63646e17b2ee6013c4b9b87', // Turkish
     ],
 
