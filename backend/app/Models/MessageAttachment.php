@@ -157,6 +157,21 @@ class MessageAttachment extends Model
     }
 
     /**
+     * Get short download URL for this attachment using token-based proxy
+     *
+     * This generates a short URL (~42 chars) that proxies to S3/local storage.
+     * Format: https://uffizi.deetech.cc/t/{8-char-token}
+     *
+     * @param Booking $booking The booking this attachment belongs to
+     * @return string Short download URL
+     */
+    public function getShortDownloadUrl(Booking $booking): string
+    {
+        $tokenService = app(\App\Services\DownloadTokenService::class);
+        return $tokenService->getShortUrl($this, $booking);
+    }
+
+    /**
      * Get file contents
      */
     public function getContents(): ?string

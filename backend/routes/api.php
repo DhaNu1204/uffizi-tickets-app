@@ -15,6 +15,7 @@ use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MonitoringController;
 use App\Http\Controllers\VoxController;
 use App\Http\Controllers\MessageHistoryController;
+use App\Http\Controllers\DownloadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -38,6 +39,12 @@ Route::post('/webhooks/twilio/incoming', [TwilioWebhookController::class, 'incom
 
 // Public attachment access - for Twilio media URLs (secured via signed URL)
 Route::get('/public/attachments/{id}/{signature}', [AttachmentController::class, 'servePublic']);
+
+// Public ticket download - short URL proxy for WhatsApp PDF attachments
+// Format: https://uffizi.deetech.cc/api/t/{8-char-token}.pdf
+// .pdf extension required by Twilio/WhatsApp for media validation
+Route::get('/t/{token}.pdf', [DownloadController::class, 'download'])
+    ->where('token', '[A-Za-z0-9]{8}');
 
 // Authentication routes - rate limited to prevent brute force
 Route::middleware('throttle:5,1')->group(function () {

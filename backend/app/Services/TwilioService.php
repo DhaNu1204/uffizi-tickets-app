@@ -57,12 +57,12 @@ class TwilioService
         $phone = $this->formatPhoneNumber($phoneNumber);
 
         // Countries where WhatsApp is NOT common (use Email+SMS instead)
+        // Note: +1 (USA/Canada) removed - many tourists use WhatsApp
         $nonWhatsAppCountries = [
             '+86',   // China (WeChat dominant)
             '+81',   // Japan (Line dominant)
             '+82',   // South Korea (KakaoTalk dominant)
             '+7',    // Russia (Telegram dominant)
-            '+1',    // USA/Canada (SMS still common, iMessage)
         ];
 
         foreach ($nonWhatsAppCountries as $prefix) {
@@ -182,15 +182,18 @@ class TwilioService
         $language = $template->language ?? 'en';
         $hasAudioGuide = $booking->has_audio_guide;
 
-        // Generate PDF URL from first attachment (14-day expiry from config)
+        // Generate PDF URL from first attachment using short proxy URL
+        // Short URLs are ~44 chars vs S3 presigned URLs at ~421 chars
+        // This keeps us well under WhatsApp's 1024 char template limit
+        // Note: Hostinger CDN security was changed to "Low" to allow Twilio access
         $pdfUrl = null;
         $hasPdfAttachment = !empty($attachments);
 
         if ($hasPdfAttachment) {
             $firstAttachment = reset($attachments);
             if ($firstAttachment instanceof MessageAttachment) {
-                // Uses 14-day default from config (whatsapp_templates.pdf_url_expiry_days)
-                $pdfUrl = $firstAttachment->getTemporaryUrl();
+                // Use short proxy URL - Hostinger CDN now allows Twilio User-Agent
+                $pdfUrl = $firstAttachment->getShortDownloadUrl($booking);
 
                 if (!$pdfUrl) {
                     Log::warning('Failed to generate PDF URL for WhatsApp', [

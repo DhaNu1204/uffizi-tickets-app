@@ -33,16 +33,16 @@ return [
     |
     */
     'ticket_pdf' => [
-        'en' => 'HXe99a2433d4e53e42ac5dca877eaa8851', // English
-        'it' => 'HXe06570ac850a2549f46ec292d0276ebe', // Italian (NEW)
-        'es' => 'HXaca15d24845e4e4115dda3d5886f69ba', // Spanish
-        'de' => 'HX98b5b8c42b0e5c0c991d6a24b0bdcffe', // German (NEW)
-        'fr' => 'HX7d751e70ec0cbfba83b6dbad4dde95aa', // French (NEW)
-        'pt' => 'HXb4dbb32e5d61194832541afe9b2a0b16', // Portuguese
-        'ja' => 'HX1eaab455cc7a45ab0d9079bdf4db7e97', // Japanese
-        'ko' => 'HX1e748c4e5cf7694fca60f28501cb2524', // Korean
-        'el' => 'HX5953568a45ab027b6c2d3bfcacfeca4c', // Greek (NEW)
-        'tr' => 'HX2c99778da63646e17b2ee6013c4b9b87', // Turkish
+        'en' => 'HX24c902699375b1d981a148c9e6981a75', // English (ticket_pdf_delivery_en)
+        'it' => 'HX304bb8b0ea10ea9682bd5364bd6167b5', // Italian (ticket_pdf_delivery_it)
+        'es' => 'HXafed6d0ace699a0e4c53ed1b4226e144', // Spanish (ticket_pdf_delivery_es)
+        'de' => 'HX4217737652d955ed3300aed1ade24caa', // German (ticket_pdf_delivery_de)
+        'fr' => 'HXc328823b4bea6943a3067978af2ee4cb', // French (ticket_pdf_delivery_fr)
+        'pt' => 'HX8d05d1e89e33345d74f95709853ddafb', // Portuguese (ticket_pdf_delivery_pt)
+        'ja' => 'HX813c83ee7f305359a09971b899073aec', // Japanese (ticket_pdf_delivery_ja)
+        'ko' => 'HX06a60a7665880a6495aa72ec3bf1cd33', // Korean (ticket_pdf_delivery_ko)
+        'el' => 'HXe0a7d51965b5cafefcd80e9e852f37e5', // Greek (ticket_pdf_delivery_el)
+        'tr' => 'HXdd63672ccee42a7ccb411f7a3cb0b447', // Turkish (ticket_pdf_delivery_tr)
     ],
 
     /*
@@ -55,16 +55,16 @@ return [
     |
     */
     'ticket_audio_pdf' => [
-        'en' => 'HXf5b8d9920da797efa1ad6f8233844aa6', // English
-        'it' => 'HXa4d47e4cf311042f2fa36b861c0566e4', // Italian
-        'es' => 'HXe44f4e61a6bf8faa37426c21b164638f', // Spanish
-        'de' => 'HX750bc9155367db86cf9b80c11f3fe9cf', // German
-        'fr' => 'HXa6b3a703fcf66a2dd0c7275b857e7246', // French
-        'pt' => 'HX4023b025f1dcc29aa17b67c00e27ca1d', // Portuguese
-        'ja' => 'HXdb1df50f096850361b3420e52453740f', // Japanese (FIXED - was HXdb1df50f0968503361b3420e52453740f)
-        'ko' => 'HXf9c9afdacd5910172982c8458578f90b', // Korean
-        'el' => 'HX4fd89046ab200f48789292a5b7ea180d', // Greek
-        'tr' => 'HX38ffd19576bd5741507c890582f1242b', // Turkish
+        'en' => 'HX31b6aa39d7ce16806d0517ac7cb3016a', // English (ticket_audio_pdf_delivery_en)
+        'it' => 'HX1ef7cbcef36de078fc81b2d1ddda0b0d', // Italian (ticket_audio_pdf_delivery_it)
+        'es' => 'HX9a056acfa7df0870afad9eb83f131c5a', // Spanish (ticket_audio_pdf_delivery_es)
+        'de' => 'HX852cd41df6a7b45acebbce69fa740c24', // German (ticket_audio_pdf_delivery_de)
+        'fr' => 'HXb8e1539777cf694c9fda02de48b29d04', // French (ticket_audio_pdf_delivery_fr)
+        'pt' => 'HX4d0de9fa22d8f8cfead71cced5a4a758', // Portuguese (ticket_audio_pdf_delivery_pt)
+        'ja' => 'HXeef172f181c5afacfd93eff101423c5c', // Japanese (ticket_audio_pdf_delivery_ja)
+        'ko' => 'HXfdc6b4cd60a06e63f589960864e72eef', // Korean (ticket_audio_pdf_delivery_ko)
+        'el' => 'HX85322be8f9fbc5ccafcda80e3e90cb09', // Greek (ticket_audio_pdf_delivery_el)
+        'tr' => 'HXf6013f84705a1d5b5ea4baed02f056b3', // Turkish (ticket_audio_pdf_delivery_tr)
     ],
 
     /*

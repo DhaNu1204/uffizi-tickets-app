@@ -96,21 +96,20 @@ export default function MessageHistory() {
 
   const getChannelIcon = (channel) => {
     const icons = {
-      whatsapp: '📱',
-      email: '📧',
-      sms: '💬',
+      whatsapp: '💬',
+      email: '✉️',
+      sms: '📱',
     };
     return icons[channel] || '📨';
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return '-';
-    return new Date(dateString).toLocaleString('en-GB', {
-      day: '2-digit',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const getChannelLabel = (channel) => {
+    const labels = {
+      whatsapp: 'WhatsApp',
+      email: 'Email',
+      sms: 'SMS',
+    };
+    return labels[channel] || channel;
   };
 
   const formatDateGroup = (dateString) => {
@@ -156,8 +155,19 @@ export default function MessageHistory() {
     fetchMessages(page);
   };
 
-  const toggleErrorExpand = (msgId) => {
-    setExpandedError(expandedError === msgId ? null : msgId);
+  const openErrorModal = (msgId) => {
+    setExpandedError(msgId);
+  };
+
+  const closeErrorModal = () => {
+    setExpandedError(null);
+  };
+
+  // Get the error message content
+  const getErrorMessage = () => {
+    if (!expandedError) return null;
+    const msg = messages.find(m => m.id === expandedError);
+    return msg?.error_message || 'No error details available';
   };
 
   // Generate page numbers for pagination
@@ -184,6 +194,27 @@ export default function MessageHistory() {
 
   return (
     <div className="message-history-page">
+      {/* Error Modal */}
+      {expandedError && (
+        <>
+          <div className="error-backdrop" onClick={closeErrorModal} />
+          <div className="error-modal">
+            <div className="error-modal-header">
+              <div className="error-modal-title">
+                <span>⚠️</span>
+                <span>Error Details</span>
+              </div>
+              <button className="error-modal-close" onClick={closeErrorModal}>
+                ✕
+              </button>
+            </div>
+            <div className="error-modal-body">
+              {getErrorMessage()}
+            </div>
+          </div>
+        </>
+      )}
+
       <div className="page-header">
         <div className="page-header-top">
           <button className="btn-back" onClick={() => navigate('/')}>
@@ -207,8 +238,8 @@ export default function MessageHistory() {
             </span>
           </div>
         </div>
-        <h1>Message History</h1>
-        <p>View all sent messages and their delivery status</p>
+        <h1 className="page-title">Message History</h1>
+        <p className="page-subtitle">Monitor all sent messages and their delivery status across channels</p>
       </div>
 
       {/* Stats Cards */}
@@ -216,11 +247,11 @@ export default function MessageHistory() {
         <div className="stats-cards">
           <div className="stat-card">
             <div className="stat-value">{stats.total}</div>
-            <div className="stat-label">Total</div>
+            <div className="stat-label">Total Messages</div>
           </div>
           <div className="stat-card success">
             <div className="stat-value">{stats.success_rate || 0}%</div>
-            <div className="stat-label">Success</div>
+            <div className="stat-label">Success Rate</div>
           </div>
           <div className="stat-card danger">
             <div className="stat-value">{stats.failed}</div>
@@ -234,6 +265,12 @@ export default function MessageHistory() {
             <div className="stat-value">{stats.by_channel?.email || 0}</div>
             <div className="stat-label">Email</div>
           </div>
+          {stats.by_channel?.sms > 0 && (
+            <div className="stat-card sms">
+              <div className="stat-value">{stats.by_channel?.sms || 0}</div>
+              <div className="stat-label">SMS</div>
+            </div>
+          )}
         </div>
       )}
 
@@ -241,7 +278,7 @@ export default function MessageHistory() {
       <form className="filters-section" onSubmit={handleSearch}>
         <input
           type="text"
-          placeholder="Search by name, phone, or booking ID..."
+          placeholder="Search by name, phone, email, or booking ID..."
           value={filters.search}
           onChange={(e) => handleFilterChange('search', e.target.value)}
           className="search-input"
@@ -278,84 +315,92 @@ export default function MessageHistory() {
         <button type="submit" className="btn-search">Search</button>
       </form>
 
-      {/* Messages Table */}
-      <div className="messages-table-container">
+      {/* Content */}
+      <div className="content-container">
         {loading ? (
-          <div className="loading">Loading messages...</div>
+          <div className="loading-state">
+            <div className="loading-spinner"></div>
+            <div className="loading-text">Loading messages...</div>
+          </div>
         ) : messages.length === 0 ? (
-          <div className="no-messages">No messages found</div>
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <div className="empty-text">No messages found</div>
+          </div>
         ) : (
           <>
             {Object.entries(groupedMessages).map(([dateKey, group]) => (
               <div key={dateKey} className="date-group">
                 <div className="date-group-header">
                   <span className="date-label">{group.label}</span>
-                  <span className="date-count">{group.messages.length} messages</span>
+                  <span className="date-count">{group.messages.length} message{group.messages.length !== 1 ? 's' : ''}</span>
                 </div>
-                <table className="messages-table">
-                  <thead>
-                    <tr>
-                      <th className="col-time">Time</th>
-                      <th className="col-channel">Channel</th>
-                      <th className="col-recipient">Recipient</th>
-                      <th className="col-booking">Booking</th>
-                      <th className="col-status">Status</th>
-                      <th className="col-error">Error</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {group.messages.map((msg) => (
-                      <tr key={msg.id} className={msg.status === 'failed' || msg.status === 'undelivered' ? 'row-failed' : ''}>
-                        <td className="col-time">
-                          {new Date(msg.created_at).toLocaleTimeString('en-GB', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </td>
-                        <td className="col-channel">
-                          <span className={`channel-badge channel-${msg.channel}`}>
-                            {getChannelIcon(msg.channel)}
-                          </span>
-                        </td>
-                        <td className="col-recipient">{msg.recipient}</td>
-                        <td className="col-booking">
-                          {msg.booking ? (
-                            <span title={msg.booking.bokun_booking_id}>
-                              {msg.booking.customer_name}
+                <div className="messages-table-container">
+                  <table className="messages-table">
+                    <thead>
+                      <tr>
+                        <th className="col-time">Time</th>
+                        <th className="col-channel">Channel</th>
+                        <th className="col-recipient">Recipient</th>
+                        <th className="col-booking">Booking</th>
+                        <th className="col-status">Status</th>
+                        <th className="col-error">Details</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.messages.map((msg) => (
+                        <tr key={msg.id} className={msg.status === 'failed' || msg.status === 'undelivered' ? 'row-failed' : ''}>
+                          <td className="col-time">
+                            <span className="time-cell">
+                              {new Date(msg.created_at).toLocaleTimeString('en-GB', {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </span>
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                        <td className="col-status">
-                          <span className={`badge ${getStatusBadge(msg.status)}`}>
-                            {msg.status}
-                          </span>
-                        </td>
-                        <td className="col-error">
-                          {msg.error_message ? (
-                            <div className="error-wrapper">
+                          </td>
+                          <td className="col-channel">
+                            <span className={`channel-badge channel-${msg.channel}`}>
+                              <span className="channel-icon">{getChannelIcon(msg.channel)}</span>
+                              {getChannelLabel(msg.channel)}
+                            </span>
+                          </td>
+                          <td className="col-recipient">
+                            <span className="recipient-cell">{msg.recipient}</span>
+                          </td>
+                          <td className="col-booking">
+                            {msg.booking ? (
+                              <div className="booking-cell">
+                                {msg.booking.customer_name}
+                                <span className="booking-cell-id">#{msg.booking.bokun_booking_id}</span>
+                              </div>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          <td className="col-status">
+                            <span className={`badge ${getStatusBadge(msg.status)}`}>
+                              {msg.status}
+                            </span>
+                          </td>
+                          <td className="col-error error-cell">
+                            {msg.error_message ? (
                               <button
                                 className="error-toggle"
-                                onClick={() => toggleErrorExpand(msg.id)}
-                                title="Click to expand"
+                                onClick={() => openErrorModal(msg.id)}
+                                title="Click to view error details"
                               >
-                                {expandedError === msg.id ? '▼' : '▶'} Error
+                                <span className="error-toggle-icon">⚠️</span>
+                                View Error
                               </button>
-                              {expandedError === msg.id && (
-                                <div className="error-expanded">
-                                  {msg.error_message}
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-muted">-</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ))}
           </>
@@ -369,6 +414,7 @@ export default function MessageHistory() {
             className="page-btn"
             disabled={pagination.current_page === 1}
             onClick={() => handlePageChange(1)}
+            title="First page"
           >
             ««
           </button>
@@ -376,6 +422,7 @@ export default function MessageHistory() {
             className="page-btn"
             disabled={pagination.current_page === 1}
             onClick={() => handlePageChange(pagination.current_page - 1)}
+            title="Previous page"
           >
             «
           </button>
@@ -398,6 +445,7 @@ export default function MessageHistory() {
             className="page-btn"
             disabled={pagination.current_page === pagination.last_page}
             onClick={() => handlePageChange(pagination.current_page + 1)}
+            title="Next page"
           >
             »
           </button>
@@ -405,12 +453,13 @@ export default function MessageHistory() {
             className="page-btn"
             disabled={pagination.current_page === pagination.last_page}
             onClick={() => handlePageChange(pagination.last_page)}
+            title="Last page"
           >
             »»
           </button>
 
           <span className="page-info">
-            {pagination.total} total
+            {pagination.total} total message{pagination.total !== 1 ? 's' : ''}
           </span>
         </div>
       )}

@@ -74,10 +74,29 @@ class TicketEmail extends Mailable
                 $disk = Storage::disk($diskName);
 
                 if ($disk->exists($file['path'])) {
-                    // Use fromStorageDisk to specify the correct disk (s3 or local)
-                    $attachments[] = Attachment::fromStorageDisk($diskName, $file['path'])
-                        ->as($file['name'] ?? basename($file['path']))
-                        ->withMime($file['mime'] ?? 'application/pdf');
+                    try {
+                        // For S3 and other remote disks, use fromData() with content
+                        // This is more reliable than fromStorageDisk() which can return null
+                        $content = $disk->get($file['path']);
+
+                        if ($content !== null) {
+                            $attachments[] = Attachment::fromData(
+                                fn () => $content,
+                                $file['name'] ?? basename($file['path'])
+                            )->withMime($file['mime'] ?? 'application/pdf');
+                        } else {
+                            \Illuminate\Support\Facades\Log::warning('Email attachment content is null', [
+                                'disk' => $diskName,
+                                'path' => $file['path'],
+                            ]);
+                        }
+                    } catch (\Exception $e) {
+                        \Illuminate\Support\Facades\Log::error('Failed to read email attachment', [
+                            'disk' => $diskName,
+                            'path' => $file['path'],
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 } else {
                     \Illuminate\Support\Facades\Log::warning('Email attachment file not found', [
                         'disk' => $diskName,
