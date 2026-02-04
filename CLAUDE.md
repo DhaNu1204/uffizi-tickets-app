@@ -96,7 +96,6 @@ frontend/
 │   │   │   ├── index.jsx          # Wizard orchestrator
 │   │   │   ├── WizardProgress.jsx # Step indicator
 │   │   │   ├── WizardNavigation.jsx # Back/Next/Send buttons
-│   │   │   ├── CustomMessageModal.jsx # Custom message editor
 │   │   │   └── steps/
 │   │   │       ├── Step1BookingDetails.jsx  # Read-only booking info
 │   │   │       ├── Step2TicketReference.jsx # Reference number entry
@@ -160,18 +159,18 @@ Customer has phone?
 **Regular Bookings (6 steps):**
 1. Booking Details (read-only)
 2. Ticket Reference (enter reference number)
-3. Attach PDF (upload ticket PDF)
-4. Select Language (template language)
-5. Preview & Confirm
+3. Attach PDF (upload ticket PDF, warns if filename doesn't match reference)
+4. Select Language (10 languages: EN, IT, ES, DE, FR, PT, JA, KO, EL, TR)
+5. Preview & Confirm (fetches actual template preview from API)
 6. Send Status
 
 **Audio Guide Bookings (7 steps):**
 1. Booking Details (read-only)
 2. Ticket Reference (enter reference number)
-3. Attach PDF (upload ticket PDF)
+3. Attach PDF (upload ticket PDF, warns if filename doesn't match reference)
 4. **Audio Guide** (generate PopGuide link) ← Extra step
-5. Select Language (template language)
-6. Preview & Confirm
+5. Select Language (10 languages: EN, IT, ES, DE, FR, PT, JA, KO, EL, TR)
+6. Preview & Confirm (fetches actual template preview from API)
 7. Send Status
 
 ### Wizard Progress States
@@ -212,11 +211,11 @@ PopGuide (formerly VOX) provides audio guide services. When a booking includes a
 ### Environment Variables
 
 ```env
-# PopGuide/VOX Audio Guide API
-VOX_BASE_URL=https://popguide-staging.herokuapp.com  # or production URL
+# PopGuide/VOX Audio Guide API (PRODUCTION)
+VOX_BASE_URL=https://popguide.herokuapp.com
 VOX_API_KEY=your_api_key
 VOX_API_SECRET=your_api_secret
-VOX_ENVIRONMENT=staging  # or production
+VOX_ENVIRONMENT=production
 ```
 
 ### Config (config/services.php)
@@ -225,8 +224,8 @@ VOX_ENVIRONMENT=staging  # or production
 'vox' => [
     'api_key' => env('VOX_API_KEY'),
     'api_secret' => env('VOX_API_SECRET'),
-    'base_url' => env('VOX_BASE_URL', 'https://popguide-staging.herokuapp.com'),
-    'environment' => env('VOX_ENVIRONMENT', 'staging'),
+    'base_url' => env('VOX_BASE_URL', 'https://popguide.herokuapp.com'),
+    'environment' => env('VOX_ENVIRONMENT', 'production'),
 ],
 ```
 
@@ -284,7 +283,7 @@ public function createAccount(int $id, VoxService $voxService): JsonResponse
 | Field | Description |
 |-------|-------------|
 | `has_audio_guide` | Boolean - does booking include audio guide? |
-| `vox_dynamic_link` | Generated PopGuide link (e.g., `https://pg-staging.unlockmy.app/xxx`) |
+| `vox_dynamic_link` | Generated PopGuide link (e.g., `https://pg.unlockmy.app/xxx`) |
 | `vox_account_id` | PopGuide account ID |
 | `audio_guide_username` | Optional: PopGuide username |
 | `audio_guide_password` | Optional: PopGuide password |
@@ -1007,10 +1006,10 @@ Twilio returns "sent" immediately but messages can fail later. To verify actual 
 ```php
 // Audio guide fields
 $booking->has_audio_guide        // Boolean
-$booking->vox_dynamic_link       // PopGuide link (e.g., https://pg.unlockmy.app/xxx)
-$booking->vox_account_id         // PopGuide account ID
-$booking->audio_guide_username   // Optional username
-$booking->audio_guide_password   // Optional password
+$booking->vox_dynamic_link       // PopGuide link (e.g., https://pg.unlockmy.app/a1dfe584ef7647d1b)
+$booking->vox_account_id         // PopGuide account ID (e.g., 4586207)
+$booking->audio_guide_username   // Optional username (e.g., SMY-000410)
+$booking->audio_guide_password   // Optional password (e.g., 90491)
 
 // Wizard tracking
 $booking->wizard_progress        // in_progress, abandoned, completed
@@ -1099,11 +1098,11 @@ AWS_SECRET_ACCESS_KEY=
 AWS_DEFAULT_REGION=eu-central-1
 AWS_BUCKET=
 
-# PopGuide/VOX Audio Guide API
-VOX_BASE_URL=https://popguide-staging.herokuapp.com
+# PopGuide/VOX Audio Guide API (PRODUCTION)
+VOX_BASE_URL=https://popguide.herokuapp.com
 VOX_API_KEY=
 VOX_API_SECRET=
-VOX_ENVIRONMENT=staging
+VOX_ENVIRONMENT=production
 
 # Email
 MAIL_MAILER=smtp
