@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { attachmentsAPI } from '../../../services/api';
 
-export default function Step3FileAttach({ booking, attachments, onChange }) {
+export default function Step3FileAttach({ booking, attachments, referenceNumber, onChange }) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState(null);
@@ -171,19 +171,19 @@ export default function Step3FileAttach({ booking, attachments, onChange }) {
           </ul>
 
           {/* Warning if filename doesn't contain reference number */}
-          {booking.reference_number && attachments.some(file =>
-            !file.original_name?.toLowerCase().includes(booking.reference_number?.toLowerCase())
+          {referenceNumber && attachments.some(file =>
+            !file.original_name?.toUpperCase().includes(referenceNumber.toUpperCase())
           ) && (
-            <div className="file-reference-warning">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
-              </svg>
-              <span>
-                Filename does not contain reference "{booking.reference_number}".
-                Please verify this is the correct ticket for this booking.
-              </span>
+            <div className="reference-mismatch-warning">
+              <span className="warning-icon">⚠️</span>
+              <div className="warning-content">
+                <strong>Filename doesn't match reference</strong>
+                <p>
+                  The uploaded file "{attachments[0]?.original_name}" does not contain
+                  the reference number "{referenceNumber}". Please verify you're uploading
+                  the correct ticket.
+                </p>
+              </div>
             </div>
           )}
 
@@ -195,7 +195,7 @@ export default function Step3FileAttach({ booking, attachments, onChange }) {
             </svg>
             <span>
               {attachments.length} file{attachments.length !== 1 ? 's' : ''} uploaded for Booking #{booking.id}
-              {booking.reference_number && ` (Ref: ${booking.reference_number})`}
+              {referenceNumber && ` (Ref: ${referenceNumber})`}
             </span>
           </div>
         </div>

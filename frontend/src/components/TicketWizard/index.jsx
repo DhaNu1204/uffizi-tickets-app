@@ -311,6 +311,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
         <Step3FileAttach
           booking={booking}
           attachments={wizardData.attachments}
+          referenceNumber={wizardData.referenceNumber}
           onChange={updateWizardData}
         />
       );

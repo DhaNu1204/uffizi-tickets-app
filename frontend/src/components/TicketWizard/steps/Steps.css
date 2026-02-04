@@ -426,28 +426,40 @@
   font-weight: 500;
 }
 
-.step-file-attach .file-reference-warning {
+.step-file-attach .reference-mismatch-warning {
   display: flex;
   align-items: flex-start;
   gap: 0.75rem;
   background: #fef3c7;
   color: #92400e;
-  padding: 0.875rem 1rem;
+  padding: 1rem 1.25rem;
   border-radius: 8px;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   margin-top: 1rem;
   border: 1px solid #fcd34d;
 }
 
-.step-file-attach .file-reference-warning svg {
-  width: 20px;
-  height: 20px;
+.step-file-attach .reference-mismatch-warning .warning-icon {
+  font-size: 1.25rem;
   flex-shrink: 0;
-  color: #d97706;
+  line-height: 1;
 }
 
-.step-file-attach .file-reference-warning span {
+.step-file-attach .reference-mismatch-warning .warning-content {
+  flex: 1;
+}
+
+.step-file-attach .reference-mismatch-warning .warning-content strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #b45309;
+  font-weight: 600;
+}
+
+.step-file-attach .reference-mismatch-warning .warning-content p {
+  margin: 0;
   line-height: 1.5;
+  color: #92400e;
 }
 
 .step-file-attach .upload-confirmation {
