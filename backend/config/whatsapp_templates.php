@@ -33,16 +33,16 @@ return [
     |
     */
     'ticket_pdf' => [
-        'en' => 'HX24c902699375b1d981a148c9e6981a75', // English (ticket_pdf_delivery_en)
-        'it' => 'HX304bb8b0ea10ea9682bd5364bd6167b5', // Italian (ticket_pdf_delivery_it)
-        'es' => 'HXafed6d0ace699a0e4c53ed1b4226e144', // Spanish (ticket_pdf_delivery_es)
-        'de' => 'HX4217737652d955ed3300aed1ade24caa', // German (ticket_pdf_delivery_de)
-        'fr' => 'HXc328823b4bea6943a3067978af2ee4cb', // French (ticket_pdf_delivery_fr)
-        'pt' => 'HX8d05d1e89e33345d74f95709853ddafb', // Portuguese (ticket_pdf_delivery_pt)
-        'ja' => 'HX813c83ee7f305359a09971b899073aec', // Japanese (ticket_pdf_delivery_ja)
-        'ko' => 'HX06a60a7665880a6495aa72ec3bf1cd33', // Korean (ticket_pdf_delivery_ko)
-        'el' => 'HXe0a7d51965b5cafefcd80e9e852f37e5', // Greek (ticket_pdf_delivery_el)
-        'tr' => 'HXdd63672ccee42a7ccb411f7a3cb0b447', // Turkish (ticket_pdf_delivery_tr)
+        'en' => 'HX7073ba78918b70321e0db16117e36eb7', // English (ticket_pdf_delivery_en)
+        'it' => 'HX31f5b2947d389d9e9cb9b446e34513e6', // Italian (ticket_pdf_delivery_it)
+        'es' => 'HX7744a566530b0857f2c8a3628c7902bb', // Spanish (ticket_pdf_delivery_es)
+        'de' => 'HX9559ba8bfed2218eebab136ab129bf59', // German (ticket_pdf_delivery_de)
+        'fr' => 'HX503892b53e38c06dade34cd42ebf56a9', // French (ticket_pdf_delivery_fr)
+        'pt' => 'HX2a1eec7c93651f1e384f197fdef43ea4', // Portuguese (ticket_pdf_delivery_pt)
+        'ja' => 'HX52939878eedbe9ebf27bd64f4859e3ba', // Japanese (ticket_pdf_delivery_ja)
+        'ko' => 'HXddda74e3c8e14c620540213d2d1a34bf', // Korean (ticket_pdf_delivery_ko)
+        'el' => 'HX62b0294c5a826552f6a7d56df2fe363f', // Greek (ticket_pdf_delivery_el)
+        'tr' => 'HXac2a78bcba60f1bc6b1283118b6797ca', // Turkish (ticket_pdf_delivery_tr)
     ],
 
     /*

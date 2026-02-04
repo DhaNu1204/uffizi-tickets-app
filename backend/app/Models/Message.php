@@ -26,6 +26,7 @@ class Message extends Model
         'status',
         'error_message',
         'retry_count',
+        'last_retry_at',
         'queued_at',
         'sent_at',
         'delivered_at',
@@ -40,6 +41,7 @@ class Message extends Model
         'delivered_at' => 'datetime',
         'read_at' => 'datetime',
         'failed_at' => 'datetime',
+        'last_retry_at' => 'datetime',
     ];
 
     /**

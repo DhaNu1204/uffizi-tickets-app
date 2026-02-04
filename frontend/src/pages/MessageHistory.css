@@ -332,10 +332,11 @@
 /* Column widths - flexible layout */
 .col-time { width: 80px; }
 .col-channel { width: 100px; text-align: center; }
-.col-recipient { width: 220px; }
-.col-booking { width: 200px; }
-.col-status { width: 120px; }
-.col-error { width: auto; min-width: 180px; }
+.col-recipient { width: 200px; }
+.col-booking { width: 180px; }
+.col-status { width: 110px; }
+.col-error { width: 140px; }
+.col-actions { width: 120px; text-align: center; }
 
 .messages-table th {
   background: #f9fafb;
@@ -616,6 +617,61 @@
 .text-muted {
   color: #9ca3af;
   font-style: italic;
+}
+
+/* ==========================================================================
+   Retry Button
+   ========================================================================== */
+
+.btn-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
+}
+
+.btn-retry:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.4);
+}
+
+.btn-retry:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-retry .retry-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.retry-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.retry-exhausted {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 500;
+  padding: 6px 10px;
+  background: #f3f4f6;
+  border-radius: 6px;
 }
 
 /* ==========================================================================

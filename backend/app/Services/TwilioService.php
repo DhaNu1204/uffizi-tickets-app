@@ -305,7 +305,87 @@ class TwilioService
     }
 
     /**
-     * Send SMS message
+     * Send SMS notification with plain text body
+     *
+     * Used for simple notifications like "check your email for tickets"
+     * Does NOT use database templates - just sends the provided body text.
+     *
+     * @param Booking $booking The booking this notification is for
+     * @param string $body The SMS message body (should be under 160 chars for 1 segment)
+     * @param string $language Language code for tracking purposes
+     * @return Message The created message record
+     */
+    public function sendSmsNotification(
+        Booking $booking,
+        string $body,
+        string $language = 'en'
+    ): Message {
+        if (empty($booking->customer_phone)) {
+            throw new \InvalidArgumentException('Booking has no customer phone');
+        }
+
+        $phone = $this->formatPhoneNumber($booking->customer_phone);
+
+        // Create message record
+        $message = Message::create([
+            'booking_id' => $booking->id,
+            'channel' => Message::CHANNEL_SMS,
+            'recipient' => $phone,
+            'content' => $body,
+            'template_id' => null, // No database template
+            'template_variables' => ['language' => $language, 'type' => 'email_notification'],
+            'status' => Message::STATUS_PENDING,
+        ]);
+
+        try {
+            $message->markQueued();
+
+            $client = $this->getClient();
+
+            // Build message options
+            $options = [
+                'from' => $this->smsFrom,
+                'body' => $body,
+            ];
+
+            // Add status callback
+            if (config('services.twilio.status_callback_url')) {
+                $options['statusCallback'] = config('services.twilio.status_callback_url');
+            }
+
+            // Send via Twilio
+            $twilioMessage = $client->messages->create($phone, $options);
+
+            $message->markSent($twilioMessage->sid);
+
+            Log::info('SMS notification sent successfully', [
+                'booking_id' => $booking->id,
+                'phone' => $phone,
+                'message_id' => $message->id,
+                'twilio_sid' => $twilioMessage->sid,
+                'body_length' => strlen($body),
+            ]);
+
+            return $message;
+
+        } catch (TwilioException $e) {
+            $message->markFailed($e->getMessage());
+
+            Log::error('Failed to send SMS notification', [
+                'booking_id' => $booking->id,
+                'phone' => $phone,
+                'error' => $e->getMessage(),
+            ]);
+
+            // Return message with failed status instead of throwing
+            // This allows MessagingService to handle partial failures gracefully
+            return $message;
+        }
+    }
+
+    /**
+     * Send SMS message using database template
+     * @deprecated Use sendSmsNotification() for simple notifications
      */
     public function sendSms(
         Booking $booking,

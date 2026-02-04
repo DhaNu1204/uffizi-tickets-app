@@ -111,6 +111,7 @@ Route::middleware(['auth:sanctum', 'throttle:60,1'])->group(function () {
     // Message History Routes (all messages)
     Route::get('/messages/all', [MessageHistoryController::class, 'index']);
     Route::get('/messages/stats', [MessageHistoryController::class, 'stats']);
+    Route::get('/messages/retryable-count', [MessageHistoryController::class, 'retryableCount']);
     Route::get('/messages/{id}/details', [MessageHistoryController::class, 'show']);
     Route::post('/messages/{id}/retry', [MessageHistoryController::class, 'retry']);
 

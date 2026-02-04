@@ -1,18 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
-import api from '../services/api';
+import api, { messagesAPI } from '../services/api';
 import './MessageHistory.css';
 
 export default function MessageHistory() {
   const navigate = useNavigate();
-  const { error: showError } = useToast();
+  const { error: showError, success: showSuccess } = useToast();
   const [messages, setMessages] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [expandedError, setExpandedError] = useState(null);
+  const [retryingIds, setRetryingIds] = useState(new Set());
   const refreshIntervalRef = useRef(null);
 
   const [filters, setFilters] = useState({
@@ -168,6 +169,35 @@ export default function MessageHistory() {
     if (!expandedError) return null;
     const msg = messages.find(m => m.id === expandedError);
     return msg?.error_message || 'No error details available';
+  };
+
+  // Handle retry for a failed message
+  const handleRetry = async (messageId) => {
+    setRetryingIds(prev => new Set([...prev, messageId]));
+    try {
+      const response = await messagesAPI.retry(messageId);
+      if (response.data.success) {
+        showSuccess('Message retry initiated successfully');
+        // Refresh to see updated status
+        fetchMessages(pagination.current_page, true);
+        fetchStats();
+      }
+    } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Failed to retry message';
+      showError(errorMsg);
+      console.error('Retry failed:', err);
+    } finally {
+      setRetryingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(messageId);
+        return newSet;
+      });
+    }
+  };
+
+  // Check if message can be retried
+  const canRetry = (msg) => {
+    return msg.status === 'failed' && (msg.retry_count || 0) < 3;
   };
 
   // Generate page numbers for pagination
@@ -345,6 +375,7 @@ export default function MessageHistory() {
                         <th className="col-booking">Booking</th>
                         <th className="col-status">Status</th>
                         <th className="col-error">Details</th>
+                        <th className="col-actions">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -392,6 +423,37 @@ export default function MessageHistory() {
                                 <span className="error-toggle-icon">⚠️</span>
                                 View Error
                               </button>
+                            ) : (
+                              <span className="text-muted">—</span>
+                            )}
+                          </td>
+                          <td className="col-actions">
+                            {canRetry(msg) ? (
+                              <button
+                                className="btn-retry"
+                                onClick={() => handleRetry(msg.id)}
+                                disabled={retryingIds.has(msg.id)}
+                                title={`Retry (${msg.retry_count || 0}/3 attempts used)`}
+                              >
+                                {retryingIds.has(msg.id) ? (
+                                  <>
+                                    <span className="retry-spinner"></span>
+                                    Retrying...
+                                  </>
+                                ) : (
+                                  <>
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="retry-icon">
+                                      <polyline points="23 4 23 10 17 10" />
+                                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                    </svg>
+                                    Retry
+                                  </>
+                                )}
+                              </button>
+                            ) : msg.status === 'failed' ? (
+                              <span className="retry-exhausted" title="Maximum retry attempts reached">
+                                Max retries
+                              </span>
                             ) : (
                               <span className="text-muted">—</span>
                             )}

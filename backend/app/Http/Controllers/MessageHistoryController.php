@@ -3,11 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\Message;
+use App\Services\MessagingService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class MessageHistoryController extends Controller
 {
+    protected MessagingService $messagingService;
+
+    public function __construct(MessagingService $messagingService)
+    {
+        $this->messagingService = $messagingService;
+    }
+
     /**
      * List all messages with filtering and pagination
      * GET /api/messages
@@ -106,27 +114,62 @@ class MessageHistoryController extends Controller
     /**
      * Retry a failed message
      * POST /api/messages/{id}/retry
+     *
+     * Actually re-sends the message using the original channel and booking context.
      */
     public function retry(int $id): JsonResponse
     {
-        $message = Message::findOrFail($id);
+        $message = Message::with(['booking', 'attachments'])->findOrFail($id);
 
-        if ($message->status !== 'failed') {
+        if (!$message->canRetry()) {
+            $errorMsg = $message->status !== Message::STATUS_FAILED
+                ? 'Only failed messages can be retried'
+                : 'Maximum retry attempts reached (3)';
+
             return response()->json([
                 'success' => false,
-                'error' => 'Only failed messages can be retried'
+                'error' => $errorMsg,
+                'retry_count' => $message->retry_count,
+                'max_retries' => Message::MAX_RETRIES,
             ], 422);
         }
 
-        // Mark for retry - actual retry would need to re-send via MessagingService
-        $message->update([
-            'status' => 'pending',
-            'error_message' => null,
-        ]);
+        // Actually retry the message
+        $result = $this->messagingService->retrySingleMessage($message);
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Message retried successfully',
+                'new_message_id' => $result['message']->id ?? null,
+                'new_status' => $result['message']->status ?? null,
+            ]);
+        }
 
         return response()->json([
-            'success' => true,
-            'message' => 'Message marked for retry'
+            'success' => false,
+            'error' => $result['error'] ?? 'Retry failed',
+            'retry_count' => $message->fresh()->retry_count,
+            'max_retries' => Message::MAX_RETRIES,
+        ], 422);
+    }
+
+    /**
+     * Get retryable messages count
+     * GET /api/messages/retryable-count
+     */
+    public function retryableCount(): JsonResponse
+    {
+        $count = Message::retryable()->count();
+
+        $byChannel = Message::retryable()
+            ->selectRaw('channel, count(*) as count')
+            ->groupBy('channel')
+            ->pluck('count', 'channel');
+
+        return response()->json([
+            'total' => $count,
+            'by_channel' => $byChannel,
         ]);
     }
 }

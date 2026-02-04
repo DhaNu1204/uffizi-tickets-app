@@ -141,6 +141,17 @@ export const messagesAPI = {
 
   // Sync message statuses from Twilio
   syncStatus: () => api.post('/messages/sync-status'),
+
+  // Message History (all messages view)
+  all: (params = {}) => api.get('/messages/all', { params }),
+  stats: () => api.get('/messages/stats'),
+  getDetails: (id) => api.get(`/messages/${id}/details`),
+
+  // Retry failed message
+  retry: (messageId) => api.post(`/messages/${messageId}/retry`),
+
+  // Get count of retryable messages
+  retryableCount: () => api.get('/messages/retryable-count'),
 };
 
 // Attachment endpoints
