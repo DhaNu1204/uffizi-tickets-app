@@ -8,7 +8,6 @@ import Step4AudioGuide from './steps/Step4AudioGuide';
 import Step4TemplateSelect from './steps/Step4TemplateSelect';
 import Step5Preview from './steps/Step5Preview';
 import Step6SendStatus from './steps/Step6SendStatus';
-import CustomMessageModal from './CustomMessageModal';
 import { bookingsAPI, messagesAPI } from '../../services/api';
 import './TicketWizard.css';
 
@@ -55,7 +54,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showCustomModal, setShowCustomModal] = useState(false);
 
   // Wizard state
   const [wizardData, setWizardData] = useState({
@@ -76,7 +74,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     attachments: [],
     // Step 4/5: Language & Template
     language: 'en',
-    customMessage: null, // For custom message { subject, content }
     // Step 5/6: Channel detection
     channelInfo: null,
     preview: null,
@@ -177,20 +174,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     setWizardData((prev) => ({ ...prev, ...updates }));
   }, []);
 
-  // Handle custom message modal
-  const handleOpenCustomModal = () => {
-    setShowCustomModal(true);
-  };
-
-  const handleSaveCustomMessage = (customData) => {
-    setWizardData((prev) => ({
-      ...prev,
-      language: 'custom',
-      customMessage: customData,
-    }));
-    setShowCustomModal(false);
-  };
-
   const handleNext = async () => {
     setError(null);
 
@@ -237,12 +220,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
         language: wizardData.language,
         attachment_ids: wizardData.attachments.map((a) => a.id),
       };
-
-      // Include custom message if using custom language
-      if (wizardData.language === 'custom' && wizardData.customMessage) {
-        sendData.custom_subject = wizardData.customMessage.subject;
-        sendData.custom_content = wizardData.customMessage.content;
-      }
 
       const response = await messagesAPI.sendTicket(booking.id, sendData);
 
@@ -336,7 +313,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
           language={wizardData.language}
           detectedLanguage={wizardData.detectedLanguage}
           onChange={updateWizardData}
-          onOpenCustomModal={handleOpenCustomModal}
         />
       );
     }
@@ -408,14 +384,6 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
         />
       </div>
 
-      {/* Custom Message Modal */}
-      {showCustomModal && (
-        <CustomMessageModal
-          booking={booking}
-          onSave={handleSaveCustomMessage}
-          onClose={() => setShowCustomModal(false)}
-        />
-      )}
     </div>
   );
 }

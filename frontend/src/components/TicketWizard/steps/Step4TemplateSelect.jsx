@@ -131,7 +131,7 @@ export function detectLanguageFromPhone(phoneNumber) {
   return { language: 'en', country: null, confidence: 'low' };
 }
 
-export default function Step4TemplateSelect({ booking, language, onChange, detectedLanguage, onOpenCustomModal }) {
+export default function Step4TemplateSelect({ booking, language, onChange, detectedLanguage }) {
   const [languages, setLanguages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isAutoDetected, setIsAutoDetected] = useState(false);
@@ -173,13 +173,6 @@ export default function Step4TemplateSelect({ booking, language, onChange, detec
   }, [languages]); // Run when languages are loaded
 
   const handleLanguageChange = (code) => {
-    if (code === 'custom') {
-      // Open custom message modal
-      if (onOpenCustomModal) {
-        onOpenCustomModal();
-      }
-      return;
-    }
     setIsAutoDetected(false);
     onChange({ language: code });
   };
@@ -241,16 +234,6 @@ export default function Step4TemplateSelect({ booking, language, onChange, detec
           </button>
         ))}
 
-        {/* Custom Language Option */}
-        <button
-          type="button"
-          className={`language-card custom-option ${language === 'custom' ? 'selected' : ''}`}
-          onClick={() => handleLanguageChange('custom')}
-        >
-          <span className="language-flag"></span>
-          <span className="language-name">Custom</span>
-          <span className="custom-hint">Type your own message</span>
-        </button>
       </div>
 
       <div className="template-info">

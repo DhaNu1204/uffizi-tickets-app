@@ -594,6 +594,144 @@
   color: white;
 }
 
+/* WhatsApp Bubble Style */
+.step-preview .whatsapp-bubble {
+  background: white;
+  padding: 1rem;
+  border-radius: 0 12px 12px 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.step-preview .whatsapp-bubble::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 0;
+  height: 0;
+  border-top: 8px solid white;
+  border-left: 8px solid transparent;
+}
+
+.step-preview .whatsapp-bubble pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+.step-preview .whatsapp-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+.step-preview .whatsapp-attachment .pdf-icon {
+  font-size: 1.125rem;
+}
+
+/* Email Preview Card */
+.step-preview .email-preview-card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.step-preview .email-preview-card .email-subject {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.step-preview .email-preview-card .email-template-info {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+.step-preview .email-preview-card .email-content-summary {
+  padding: 1rem;
+}
+
+.step-preview .email-preview-card .email-content-summary p {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.step-preview .email-preview-card .email-content-summary ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+  line-height: 1.8;
+}
+
+.step-preview .email-preview-card .email-attachment {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+.step-preview .email-preview-card .email-attachment .pdf-icon {
+  font-size: 1.125rem;
+}
+
+/* SMS Bubble Style */
+.step-preview .sms-bubble {
+  background: white;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.step-preview .sms-bubble pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: #1f2937;
+}
+
+/* Loading and Error States */
+.step-preview .loading-state,
+.step-preview .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+}
+
+.step-preview .loading-state p {
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+.step-preview .error-state p {
+  color: #dc2626;
+  font-size: 0.875rem;
+}
+
 /* Confirm Box */
 .step-preview .confirm-box {
   background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
