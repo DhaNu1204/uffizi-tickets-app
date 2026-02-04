@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Cache;
  * It generates dynamic links that customers can use to access their audio guide.
  *
  * API Documentation: PopGuide Partners API v3
+ * Production: https://popguide.herokuapp.com
  * Staging: https://popguide-staging.herokuapp.com
- * Production: TBD
  */
 class VoxService
 {
