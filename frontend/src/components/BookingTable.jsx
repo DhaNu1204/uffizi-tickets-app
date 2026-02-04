@@ -14,8 +14,6 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
   const [refInput, setRefInput] = useState('');
   const [notesInput, setNotesInput] = useState('');
   const [guideInput, setGuideInput] = useState('');
-  const [sendingId, setSendingId] = useState(null); // Track which booking ticket is being toggled
-  const [sendingAudioGuideId, setSendingAudioGuideId] = useState(null); // Track audio guide toggle
   const [copiedRef, setCopiedRef] = useState(null); // Track which reference was copied
 
   // Check if booking is Timed Entry (eligible for wizard)
@@ -73,28 +71,20 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
     }
   };
 
-  // Handle toggle tickets sent
-  const handleToggleSent = async (booking) => {
-    setSendingId(booking.id);
-    try {
-      await onUpdate(booking.id, {
-        tickets_sent: !booking.tickets_sent_at,
-      });
-    } finally {
-      setSendingId(null);
+  // Get the delivery channel description for sent tickets
+  const getDeliveryChannel = (booking) => {
+    // Check if we have last message info
+    if (booking.last_message_channel) {
+      const channels = {
+        'whatsapp': 'WhatsApp',
+        'email': 'Email',
+        'sms': 'SMS',
+        'whatsapp_email': 'WhatsApp + Email',
+        'email_sms': 'Email + SMS'
+      };
+      return channels[booking.last_message_channel] || booking.last_message_channel;
     }
-  };
-
-  // Handle toggle audio guide sent
-  const handleToggleAudioGuideSent = async (booking) => {
-    setSendingAudioGuideId(booking.id);
-    try {
-      await onUpdate(booking.id, {
-        audio_guide_sent: !booking.audio_guide_sent_at,
-      });
-    } finally {
-      setSendingAudioGuideId(null);
-    }
+    return null;
   };
 
   // Check if booking has audio guide
@@ -342,64 +332,91 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
         </td>
         <td>
           <div className="actions-cell">
-            {/* Wizard abandoned indicator */}
-            {booking.wizard_status?.status === 'abandoned' && isTimedEntry(booking.bokun_product_id) && (
-              <span className="wizard-abandoned-badge" title="Wizard was closed without completing">
-                {booking.wizard_status.label}
-              </span>
-            )}
-            <button
-              className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'} ${booking.wizard_status?.status === 'abandoned' ? 'resume' : ''}`}
-              onClick={() => handleTicketAction(booking)}
-            >
-              {booking.wizard_status?.status === 'abandoned'
-                ? 'Resume'
-                : booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
-            </button>
-            {booking.status === 'TICKET_PURCHASED' && (
+            {/* GUIDED TOURS - just show Edit button, no ticket sending */}
+            {isGuidedTour(booking.bokun_product_id) ? (
               <button
-                className={`sent-btn ${booking.tickets_sent_at ? 'sent' : ''}`}
-                onClick={() => handleToggleSent(booking)}
-                disabled={sendingId === booking.id}
-                title={booking.tickets_sent_at ? `Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}` : 'Mark as sent to client'}
+                className="action-btn edit"
+                onClick={() => handleOpenModal(booking)}
               >
-                {sendingId === booking.id ? (
-                  <span className="btn-spinner"></span>
-                ) : booking.tickets_sent_at ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 2L11 13" />
-                    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                  </svg>
-                )}
-                <span>{booking.tickets_sent_at ? 'Sent' : 'Send'}</span>
+                Edit
               </button>
-            )}
-            {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
-              <button
-                className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
-                onClick={() => handleToggleAudioGuideSent(booking)}
-                disabled={sendingAudioGuideId === booking.id}
-                title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
-              >
-                {sendingAudioGuideId === booking.id ? (
-                  <span className="btn-spinner"></span>
-                ) : booking.audio_guide_sent_at ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+            ) : isTimedEntry(booking.bokun_product_id) ? (
+              /* TIMED ENTRY - show wizard-based actions */
+              <>
+                {/* COMPLETED - Tickets have been sent */}
+                {booking.tickets_sent_at ? (
+                  <div className="sent-status">
+                    <span className="sent-badge-complete" title={`Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}`}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Sent
+                    </span>
+                    {getDeliveryChannel(booking) && (
+                      <span className="delivery-channel">via {getDeliveryChannel(booking)}</span>
+                    )}
+                    <button
+                      className="action-btn-link resend"
+                      onClick={() => handleOpenWizard(booking)}
+                      title="Open wizard to resend tickets"
+                    >
+                      Resend
+                    </button>
+                  </div>
+                ) : booking.wizard_status?.status === 'in_progress' ? (
+                  /* IN PROGRESS - Show step and resume */
+                  <div className="wizard-progress-actions">
+                    <span className="wizard-step-badge in-progress">
+                      {booking.wizard_status.label}
+                    </span>
+                    <button
+                      className="action-btn resume"
+                      onClick={() => handleOpenWizard(booking)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                      </svg>
+                      Resume
+                    </button>
+                  </div>
+                ) : booking.wizard_status?.status === 'abandoned' ? (
+                  /* ABANDONED - Show resume */
+                  <div className="wizard-progress-actions">
+                    <span className="wizard-step-badge abandoned" title="Wizard was closed without completing">
+                      {booking.wizard_status.label}
+                    </span>
+                    <button
+                      className="action-btn resume"
+                      onClick={() => handleOpenWizard(booking)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                      </svg>
+                      Resume
+                    </button>
+                  </div>
                 ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
+                  /* NOT STARTED - Show Send Tickets button */
+                  <button
+                    className="action-btn primary send-tickets"
+                    onClick={() => handleOpenWizard(booking)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    Send Tickets
+                  </button>
                 )}
-                <span>{booking.audio_guide_sent_at ? 'AG Sent' : 'AG Send'}</span>
+              </>
+            ) : (
+              /* OTHER PRODUCTS - just show Edit */
+              <button
+                className="action-btn edit"
+                onClick={() => handleOpenModal(booking)}
+              >
+                Edit
               </button>
             )}
           </div>
@@ -507,54 +524,54 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
         <div className="card-footer">
           <span className="booking-id">#{booking.bokun_booking_id}</span>
           <div className="card-actions">
-            <button
-              className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-              onClick={() => handleTicketAction(booking)}
-            >
-              {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
-            </button>
-            {booking.status === 'TICKET_PURCHASED' && (
+            {/* GUIDED TOURS - just show Edit */}
+            {isGuidedTour(booking.bokun_product_id) ? (
               <button
-                className={`sent-btn ${booking.tickets_sent_at ? 'sent' : ''}`}
-                onClick={() => handleToggleSent(booking)}
-                disabled={sendingId === booking.id}
-                title={booking.tickets_sent_at ? `Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}` : 'Mark as sent'}
+                className="action-btn edit"
+                onClick={() => handleOpenModal(booking)}
               >
-                {sendingId === booking.id ? (
-                  <span className="btn-spinner"></span>
-                ) : booking.tickets_sent_at ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 2L11 13" />
-                    <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                  </svg>
-                )}
+                Edit
               </button>
-            )}
-            {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
-              <button
-                className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
-                onClick={() => handleToggleAudioGuideSent(booking)}
-                disabled={sendingAudioGuideId === booking.id}
-                title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
-              >
-                {sendingAudioGuideId === booking.id ? (
-                  <span className="btn-spinner"></span>
-                ) : booking.audio_guide_sent_at ? (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+            ) : isTimedEntry(booking.bokun_product_id) ? (
+              /* TIMED ENTRY - wizard-based actions */
+              <>
+                {booking.tickets_sent_at ? (
+                  <div className="sent-status mobile">
+                    <span className="sent-badge-complete">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      Sent
+                    </span>
+                    <button
+                      className="action-btn-link resend"
+                      onClick={() => handleOpenWizard(booking)}
+                    >
+                      Resend
+                    </button>
+                  </div>
+                ) : booking.wizard_status?.status === 'in_progress' || booking.wizard_status?.status === 'abandoned' ? (
+                  <button
+                    className="action-btn resume"
+                    onClick={() => handleOpenWizard(booking)}
+                  >
+                    Resume {booking.wizard_status.label}
+                  </button>
                 ) : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                    <line x1="12" y1="19" x2="12" y2="23" />
-                    <line x1="8" y1="23" x2="16" y2="23" />
-                  </svg>
+                  <button
+                    className="action-btn primary send-tickets"
+                    onClick={() => handleOpenWizard(booking)}
+                  >
+                    Send Tickets
+                  </button>
                 )}
+              </>
+            ) : (
+              <button
+                className="action-btn edit"
+                onClick={() => handleOpenModal(booking)}
+              >
+                Edit
               </button>
             )}
           </div>
@@ -741,64 +758,85 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                     </td>
                     <td>
                       <div className="actions-cell">
-                        {/* Wizard abandoned indicator */}
-                        {booking.wizard_status?.status === 'abandoned' && isTimedEntry(booking.bokun_product_id) && (
-                          <span className="wizard-abandoned-badge" title="Wizard was closed without completing">
-                            {booking.wizard_status.label}
-                          </span>
-                        )}
-                        <button
-                          className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'} ${booking.wizard_status?.status === 'abandoned' ? 'resume' : ''}`}
-                          onClick={() => handleTicketAction(booking)}
-                        >
-                          {booking.wizard_status?.status === 'abandoned'
-                            ? 'Resume'
-                            : booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
-                        </button>
-                        {booking.status === 'TICKET_PURCHASED' && (
+                        {/* GUIDED TOURS - just show Edit */}
+                        {isGuidedTour(booking.bokun_product_id) ? (
                           <button
-                            className={`sent-btn ${booking.tickets_sent_at ? 'sent' : ''}`}
-                            onClick={() => handleToggleSent(booking)}
-                            disabled={sendingId === booking.id}
-                            title={booking.tickets_sent_at ? `Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}` : 'Mark as sent to client'}
+                            className="action-btn edit"
+                            onClick={() => handleOpenModal(booking)}
                           >
-                            {sendingId === booking.id ? (
-                              <span className="btn-spinner"></span>
-                            ) : booking.tickets_sent_at ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M22 2L11 13" />
-                                <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                              </svg>
-                            )}
-                            <span>{booking.tickets_sent_at ? 'Sent' : 'Send'}</span>
+                            Edit
                           </button>
-                        )}
-                        {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
-                          <button
-                            className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
-                            onClick={() => handleToggleAudioGuideSent(booking)}
-                            disabled={sendingAudioGuideId === booking.id}
-                            title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
-                          >
-                            {sendingAudioGuideId === booking.id ? (
-                              <span className="btn-spinner"></span>
-                            ) : booking.audio_guide_sent_at ? (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <polyline points="20 6 9 17 4 12" />
-                              </svg>
+                        ) : isTimedEntry(booking.bokun_product_id) ? (
+                          /* TIMED ENTRY - wizard-based actions */
+                          <>
+                            {booking.tickets_sent_at ? (
+                              <div className="sent-status">
+                                <span className="sent-badge-complete" title={`Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}`}>
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                  Sent
+                                </span>
+                                {getDeliveryChannel(booking) && (
+                                  <span className="delivery-channel">via {getDeliveryChannel(booking)}</span>
+                                )}
+                                <button
+                                  className="action-btn-link resend"
+                                  onClick={() => handleOpenWizard(booking)}
+                                >
+                                  Resend
+                                </button>
+                              </div>
+                            ) : booking.wizard_status?.status === 'in_progress' ? (
+                              <div className="wizard-progress-actions">
+                                <span className="wizard-step-badge in-progress">
+                                  {booking.wizard_status.label}
+                                </span>
+                                <button
+                                  className="action-btn resume"
+                                  onClick={() => handleOpenWizard(booking)}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="23 4 23 10 17 10" />
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                  </svg>
+                                  Resume
+                                </button>
+                              </div>
+                            ) : booking.wizard_status?.status === 'abandoned' ? (
+                              <div className="wizard-progress-actions">
+                                <span className="wizard-step-badge abandoned">
+                                  {booking.wizard_status.label}
+                                </span>
+                                <button
+                                  className="action-btn resume"
+                                  onClick={() => handleOpenWizard(booking)}
+                                >
+                                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <polyline points="23 4 23 10 17 10" />
+                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                  </svg>
+                                  Resume
+                                </button>
+                              </div>
                             ) : (
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                <line x1="12" y1="19" x2="12" y2="23" />
-                                <line x1="8" y1="23" x2="16" y2="23" />
-                              </svg>
+                              <button
+                                className="action-btn primary send-tickets"
+                                onClick={() => handleOpenWizard(booking)}
+                              >
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polygon points="5 3 19 12 5 21 5 3" />
+                                </svg>
+                                Send Tickets
+                              </button>
                             )}
-                            <span>{booking.audio_guide_sent_at ? 'AG Sent' : 'AG Send'}</span>
+                          </>
+                        ) : (
+                          <button
+                            className="action-btn edit"
+                            onClick={() => handleOpenModal(booking)}
+                          >
+                            Edit
                           </button>
                         )}
                       </div>
@@ -872,54 +910,54 @@ const BookingTable = ({ bookings, onUpdate, loading, compact = false, productTyp
                   <div className="card-footer">
                     <span className="booking-id">#{booking.bokun_booking_id}</span>
                     <div className="card-actions">
-                      <button
-                        className={`action-btn ${booking.status === 'TICKET_PURCHASED' ? 'edit' : 'primary'}`}
-                        onClick={() => handleTicketAction(booking)}
-                      >
-                        {booking.status === 'TICKET_PURCHASED' ? 'Edit' : 'Add Ticket'}
-                      </button>
-                      {booking.status === 'TICKET_PURCHASED' && (
+                      {/* GUIDED TOURS */}
+                      {isGuidedTour(booking.bokun_product_id) ? (
                         <button
-                          className={`sent-btn ${booking.tickets_sent_at ? 'sent' : ''}`}
-                          onClick={() => handleToggleSent(booking)}
-                          disabled={sendingId === booking.id}
-                          title={booking.tickets_sent_at ? `Sent on ${new Date(booking.tickets_sent_at).toLocaleString('en-GB')}` : 'Mark as sent'}
+                          className="action-btn edit"
+                          onClick={() => handleOpenModal(booking)}
                         >
-                          {sendingId === booking.id ? (
-                            <span className="btn-spinner"></span>
-                          ) : booking.tickets_sent_at ? (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                          ) : (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M22 2L11 13" />
-                              <path d="M22 2L15 22L11 13L2 9L22 2Z" />
-                            </svg>
-                          )}
+                          Edit
                         </button>
-                      )}
-                      {booking.status === 'TICKET_PURCHASED' && hasAudioGuide(booking) && (
-                        <button
-                          className={`sent-btn audio-guide-btn ${booking.audio_guide_sent_at ? 'sent' : ''}`}
-                          onClick={() => handleToggleAudioGuideSent(booking)}
-                          disabled={sendingAudioGuideId === booking.id}
-                          title={booking.audio_guide_sent_at ? `Audio guide sent on ${new Date(booking.audio_guide_sent_at).toLocaleString('en-GB')}` : 'Mark audio guide as sent'}
-                        >
-                          {sendingAudioGuideId === booking.id ? (
-                            <span className="btn-spinner"></span>
-                          ) : booking.audio_guide_sent_at ? (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="20 6 9 17 4 12" />
-                            </svg>
+                      ) : isTimedEntry(booking.bokun_product_id) ? (
+                        /* TIMED ENTRY */
+                        <>
+                          {booking.tickets_sent_at ? (
+                            <div className="sent-status mobile">
+                              <span className="sent-badge-complete">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Sent
+                              </span>
+                              <button
+                                className="action-btn-link resend"
+                                onClick={() => handleOpenWizard(booking)}
+                              >
+                                Resend
+                              </button>
+                            </div>
+                          ) : booking.wizard_status?.status === 'in_progress' || booking.wizard_status?.status === 'abandoned' ? (
+                            <button
+                              className="action-btn resume"
+                              onClick={() => handleOpenWizard(booking)}
+                            >
+                              Resume {booking.wizard_status.label}
+                            </button>
                           ) : (
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                              <line x1="12" y1="19" x2="12" y2="23" />
-                              <line x1="8" y1="23" x2="16" y2="23" />
-                            </svg>
+                            <button
+                              className="action-btn primary send-tickets"
+                              onClick={() => handleOpenWizard(booking)}
+                            >
+                              Send Tickets
+                            </button>
                           )}
+                        </>
+                      ) : (
+                        <button
+                          className="action-btn edit"
+                          onClick={() => handleOpenModal(booking)}
+                        >
+                          Edit
                         </button>
                       )}
                     </div>

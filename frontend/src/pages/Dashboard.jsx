@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { bookingsAPI } from '../services/api';
+import { bookingsAPI, conversationsAPI } from '../services/api';
 import BookingTable from '../components/BookingTable';
 import ManualSendModal from '../components/ManualSendModal';
 import { PRODUCT_TYPES } from '../config/products';
@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [manualSendOpen, setManualSendOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Swipe gesture state
   const touchStartX = useRef(null);
@@ -267,6 +268,22 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [selectedDate]);
 
+  // Fetch unread conversation count (for nav badge)
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await conversationsAPI.unreadCount();
+        setUnreadCount(response.data.total_unread || 0);
+      } catch (err) {
+        // Silently fail - not critical
+      }
+    };
+
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000); // Poll every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   // Auto-sync on dashboard load
   useEffect(() => {
     const syncOnLoad = async () => {
@@ -407,8 +424,6 @@ const Dashboard = () => {
     fetchStats();
   }, [fetchBookings, fetchStats]);
 
-  const summary = stats?.summary || {};
-
   return (
     <div className="dashboard">
       {/* Header */}
@@ -446,6 +461,7 @@ const Dashboard = () => {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                   Conversations
+                  {unreadCount > 0 && <span className="nav-unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
                 </button>
                 <button onClick={() => { setMenuOpen(false); navigate('/webhooks'); }} className="dropdown-item">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -505,52 +521,25 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="stats-grid">
-          <div className="stat-card urgent">
+        {/* Daily Stats Cards - Prominent at top */}
+        <div className="stats-grid daily-stats">
+          <div className="stat-card info">
             <div className="stat-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                <line x1="12" y1="9" x2="12" y2="13" />
-                <line x1="12" y1="17" x2="12.01" y2="17" />
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
             </div>
             <div className="stat-content">
-              <h3>Tickets Needed</h3>
-              <div className="stat-value">{summary.pending_tickets || 0}</div>
-              <p className="stat-desc">Action Required</p>
+              <h3>Bookings</h3>
+              <div className="stat-value">{selectedDayBookings?.total_bookings || 0}</div>
+              <p className="stat-desc">Today's Total</p>
             </div>
           </div>
 
           <div className="stat-card success">
-            <div className="stat-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                <polyline points="22 4 12 14.01 9 11.01" />
-              </svg>
-            </div>
-            <div className="stat-content">
-              <h3>Tickets Ready</h3>
-              <div className="stat-value">{summary.purchased_tickets || 0}</div>
-              <p className="stat-desc">All Set</p>
-            </div>
-          </div>
-
-          <div className="stat-card warning">
-            <div className="stat-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <div className="stat-content">
-              <h3>Next 7 Days</h3>
-              <div className="stat-value">{summary.upcoming_pending_7_days || 0}</div>
-              <p className="stat-desc">Pending Tours</p>
-            </div>
-          </div>
-
-          <div className="stat-card info">
             <div className="stat-icon">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -560,40 +549,43 @@ const Dashboard = () => {
               </svg>
             </div>
             <div className="stat-content">
-              <h3>Total Bookings</h3>
-              <div className="stat-value">{summary.total_bookings || 0}</div>
-              <p className="stat-desc">In System</p>
+              <h3>Guests</h3>
+              <div className="stat-value">{selectedDayBookings?.total_pax || 0}</div>
+              <p className="stat-desc">Total Visitors</p>
+            </div>
+          </div>
+
+          <div className={`stat-card ${selectedDayBookings?.pending_count > 0 ? 'warning' : 'neutral'}`}>
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <h3>Pending</h3>
+              <div className="stat-value">{selectedDayBookings?.pending_count || 0}</div>
+              <p className="stat-desc">Need Tickets</p>
+            </div>
+          </div>
+
+          <div className="stat-card complete">
+            <div className="stat-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
+            <div className="stat-content">
+              <h3>Complete</h3>
+              <div className="stat-value">{selectedDayBookings ? selectedDayBookings.total_bookings - selectedDayBookings.pending_count : 0}</div>
+              <p className="stat-desc">Tickets Sent</p>
             </div>
           </div>
         </div>
 
         {/* Bookings Section */}
         <section className="bookings-section">
-          <div className="section-header">
-            <h2>Daily Bookings</h2>
-            <div className="header-actions">
-              <button
-                onClick={handleSync}
-                className="btn btn-primary"
-                disabled={syncing}
-              >
-                {syncing ? (
-                  <>
-                    <span className="spinner"></span>
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="23 4 23 10 17 10" />
-                      <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                    </svg>
-                    Sync Bokun
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
 
           {/* Date Navigator */}
           <div className="date-navigator">
@@ -629,6 +621,27 @@ const Dashboard = () => {
                 Go to Today
               </button>
             )}
+
+            <button
+              onClick={handleSync}
+              className="btn btn-sync"
+              disabled={syncing}
+            >
+              {syncing ? (
+                <>
+                  <span className="spinner"></span>
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 4 23 10 17 10" />
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  Sync Bokun
+                </>
+              )}
+            </button>
 
             {/* Calendar Dropdown */}
             {calendarOpen && (
@@ -682,28 +695,6 @@ const Dashboard = () => {
               </div>
             )}
           </div>
-
-          {/* Day Summary Stats */}
-          {selectedDayBookings && (
-            <div className="day-summary">
-              <div className="summary-stat">
-                <strong>{selectedDayBookings.total_bookings}</strong>
-                <span>Bookings</span>
-              </div>
-              <div className="summary-stat">
-                <strong>{selectedDayBookings.total_pax}</strong>
-                <span>Guests</span>
-              </div>
-              <div className={`summary-stat ${selectedDayBookings.pending_count > 0 ? 'pending' : 'complete'}`}>
-                <strong>{selectedDayBookings.pending_count}</strong>
-                <span>Pending</span>
-              </div>
-              <div className="summary-stat complete">
-                <strong>{selectedDayBookings.total_bookings - selectedDayBookings.pending_count}</strong>
-                <span>Complete</span>
-              </div>
-            </div>
-          )}
 
           {/* Filters */}
           <div className="filters-bar">
