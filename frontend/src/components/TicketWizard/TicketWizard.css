@@ -43,6 +43,35 @@
   font-weight: 600;
 }
 
+.wizard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-save-exit {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-save-exit:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-save-exit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .wizard-close {
   background: transparent;
   border: none;
@@ -511,6 +540,17 @@
   color: #6b7280;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
+}
+
+.saved-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #10b981;
+  font-size: 13px;
+  font-weight: 500;
+  margin-top: 6px;
+  margin-bottom: 0;
 }
 
 .form-help {

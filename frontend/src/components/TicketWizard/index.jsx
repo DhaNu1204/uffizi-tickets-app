@@ -8,7 +8,7 @@ import Step4AudioGuide from './steps/Step4AudioGuide';
 import Step4TemplateSelect from './steps/Step4TemplateSelect';
 import Step5Preview from './steps/Step5Preview';
 import Step6SendStatus from './steps/Step6SendStatus';
-import { bookingsAPI, messagesAPI } from '../../services/api';
+import { bookingsAPI, messagesAPI, attachmentsAPI } from '../../services/api';
 import './TicketWizard.css';
 
 /**
@@ -53,6 +53,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
 
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState(null);
 
   // Wizard state
@@ -136,6 +137,21 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
       }));
     }
   }, [wizardData.hasVoxAccount, STEP_AUDIO]);
+
+  // Load existing attachments when wizard opens (for resume)
+  useEffect(() => {
+    const loadExistingAttachments = async () => {
+      try {
+        const response = await attachmentsAPI.list(booking.id);
+        if (response.data && response.data.length > 0) {
+          setWizardData(prev => ({ ...prev, attachments: response.data }));
+        }
+      } catch (err) {
+        console.error('Failed to load existing attachments:', err);
+      }
+    };
+    loadExistingAttachments();
+  }, [booking.id]);
 
   // Detect channel when reaching preview step
   useEffect(() => {
@@ -238,6 +254,30 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     }
   };
 
+  const handleSaveAndExit = async () => {
+    setIsSaving(true);
+    try {
+      // Save reference number if entered
+      if (wizardData.referenceNumber && wizardData.referenceNumber.length === 8) {
+        await bookingsAPI.update(booking.id, {
+          reference_number: wizardData.referenceNumber,
+          guide_name: wizardData.guideName || null,
+        });
+      }
+
+      // Update wizard progress so dashboard shows "Resume"
+      await bookingsAPI.updateWizardProgress(booking.id, currentStep, 'save_exit');
+
+      onComplete?.({ saved: true });
+      onClose();
+    } catch (err) {
+      setError('Failed to save progress');
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleClose = (force = false) => {
     // If ticket was sent successfully, mark as complete and call onComplete
     if (wizardData.sendResult?.success) {
@@ -250,7 +290,7 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
     // If user has made progress (step > 1), confirm before closing
     if (!force && currentStep > 1) {
       const confirmClose = window.confirm(
-        'Are you sure you want to close? Your progress will be lost.'
+        'Close without saving? Use "Save & Exit" to keep your progress.'
       );
       if (!confirmClose) return;
     }
@@ -352,9 +392,20 @@ export default function TicketWizard({ booking, onClose, onComplete }) {
       <div className="ticket-wizard" onClick={(e) => e.stopPropagation()}>
         <div className="wizard-header">
           <h2>Send Ticket to Customer</h2>
-          <button className="wizard-close" onClick={handleClose}>
-            &times;
-          </button>
+          <div className="wizard-header-actions">
+            {currentStep > 1 && currentStep < STEP_SEND && !wizardData.sendResult && (
+              <button
+                className="btn-save-exit"
+                onClick={handleSaveAndExit}
+                disabled={isSaving}
+              >
+                {isSaving ? 'Saving...' : 'Save & Exit'}
+              </button>
+            )}
+            <button className="wizard-close" onClick={() => handleClose()}>
+              &times;
+            </button>
+          </div>
         </div>
 
         <WizardProgress steps={STEPS} currentStep={currentStep} />

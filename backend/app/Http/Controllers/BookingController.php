@@ -195,8 +195,8 @@ class BookingController extends Controller
     public function updateWizardProgress(Request $request, $id)
     {
         $validated = $request->validate([
-            'step' => 'required|integer|min:1|max:6',
-            'action' => 'required|in:start,progress,abandon,complete',
+            'step' => 'required|integer|min:1|max:7',
+            'action' => 'required|in:start,progress,abandon,complete,save_exit',
         ]);
 
         $booking = Booking::findOrFail($id);
@@ -214,6 +214,12 @@ class BookingController extends Controller
                 if (!$booking->wizard_started_at) {
                     $booking->wizard_started_at = Carbon::now();
                 }
+                $booking->wizard_last_step = $validated['step'];
+                $booking->wizard_abandoned_at = null;
+                break;
+
+            case 'save_exit':
+                // User saved progress and exited - keep as in-progress, not abandoned
                 $booking->wizard_last_step = $validated['step'];
                 $booking->wizard_abandoned_at = null;
                 break;
