@@ -10,6 +10,7 @@ export function formatDate(date) {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
+    timeZone: 'UTC',
   });
 }
 
@@ -25,6 +26,7 @@ export function formatTime(date) {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
+    timeZone: 'UTC',
   });
 }
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { voxAPI } from '../../../services/api';
+import { formatDate } from '../../../utils/dateUtils';
 import './Steps.css';
 
 export default function Step4AudioGuide({ booking, wizardData, onChange }) {
@@ -98,7 +99,7 @@ export default function Step4AudioGuide({ booking, wizardData, onChange }) {
         </div>
         <div className="info-row">
           <span className="label">Tour Date:</span>
-          <span className="value">{booking.tour_date}</span>
+          <span className="value">{formatDate(booking.tour_date)}</span>
         </div>
       </div>
 
