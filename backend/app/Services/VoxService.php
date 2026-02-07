@@ -194,6 +194,21 @@ class VoxService
                 ->withHeaders($this->getHeaders())
                 ->post($this->baseUrl . '/partners_api/v3/accounts', $payload);
 
+            // Retry once with fresh token if auth-related failure
+            // PopGuide returns 404 (not 401) when token is stale
+            if (in_array($response->status(), [401, 403, 404])) {
+                Log::warning('VOX token appears stale, clearing cache and retrying', [
+                    'booking_id' => $booking->id,
+                    'status' => $response->status(),
+                ]);
+
+                $this->clearToken();
+
+                $response = Http::timeout(30)
+                    ->withHeaders($this->getHeaders())
+                    ->post($this->baseUrl . '/partners_api/v3/accounts', $payload);
+            }
+
             $data = $response->json();
 
             Log::info('VOX API response', [
